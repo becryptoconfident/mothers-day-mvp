@@ -37,7 +37,7 @@ export default function Home() {
 
         {pitchAudio ? (
           <div className="max-w-md mx-auto mb-12 text-center">
-            <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">
+            <p className="text-xs uppercase tracking-wide text-gray-800 mb-2">
               60 seconds from Memphis
             </p>
             <audio controls src={pitchAudio} className="w-full" />
@@ -61,7 +61,7 @@ export default function Home() {
             And for just a <em>liiiitle</em> bit more, you get to customize your own Mother&rsquo;s Day
             digital treasure hunt. You choose the adventure.
           </p>
-          <p className="text-sm text-gray-500 italic">Kleenex not provided.</p>
+          <p className="text-sm text-gray-800 italic">Kleenex not provided.</p>
           <p>
             And hey, if it really sucks, shoot me some feedback and you&rsquo;ll get a refund.
           </p>
@@ -102,7 +102,7 @@ export default function Home() {
             >
               Start Here — See My Messages Free →
             </Link>
-            <p className="text-xs text-gray-500 mt-2">No card up front. 5 questions. ~5 minutes.</p>
+            <p className="text-xs text-gray-800 mt-2">No card up front. 5 questions. ~5 minutes.</p>
           </div>
         </div>
 
@@ -137,7 +137,7 @@ export default function Home() {
               same blue tupperware. Just wanted you to know I notice.
             </p>
           </div>
-          <p className="text-center text-sm text-gray-500 mt-4 italic">
+          <p className="text-center text-sm text-gray-800 mt-4 italic">
             ↑ AI wrote that from the answer: &ldquo;Makes soup when I&rsquo;m sick&rdquo;
           </p>
         </div>
@@ -145,7 +145,7 @@ export default function Home() {
         {/* Email-flow clarity callout — set expectations before pricing */}
         <div className="max-w-2xl mx-auto mb-10">
           <div className="bg-white border-2 border-gray-200 rounded-2xl p-5 md:p-6 shadow-sm">
-            <p className="text-xs uppercase tracking-widest text-gray-500 mb-2 font-semibold">
+            <p className="text-xs uppercase tracking-widest text-gray-800 mb-2 font-semibold">
               How this actually works
             </p>
             <p className="text-base md:text-lg text-gray-800 mb-2">
@@ -264,7 +264,7 @@ export default function Home() {
               </p>
             </div>
           </div>
-          <p className="text-sm text-gray-500 mt-6">
+          <p className="text-sm text-gray-800 mt-6">
             Mother&rsquo;s Day is May 10th. That&rsquo;s 12 days from now.
           </p>
         </div>
@@ -300,7 +300,7 @@ export default function Home() {
           >
             See My Messages (Free) →
           </Link>
-          <p className="text-xs text-gray-500 mt-3">No card up front. See the messages first.</p>
+          <p className="text-xs text-gray-800 mt-3">No card up front. See the messages first.</p>
         </div>
 
         <div className="text-center text-gray-600 pt-12 border-t">
@@ -311,12 +311,12 @@ export default function Home() {
             I built this for my mom Bonnie. So this year I&rsquo;m the favorite. Now you can be too.
           </p>
           <p className="font-serif text-xl text-rose-700 mt-4 tracking-wide">#doitforbonnie</p>
-          <p className="text-xs text-gray-500 mt-2 italic">
+          <p className="text-xs text-gray-800 mt-2 italic">
             Use the tag with your mom&rsquo;s name. Pass it on.
           </p>
           <p className="text-sm mt-6">
             <a href="https://memphiscarter.com" className="underline">memphiscarter.com</a>
-            <span className="mx-2 text-gray-400">|</span>
+            <span className="mx-2 text-gray-700">|</span>
             <a href="https://twitter.com/memphis__carter" className="underline">@memphis__carter</a>
           </p>
         </div>
@@ -368,7 +368,7 @@ function TierCard(props: {
       >
         {props.cta}
       </Link>
-      <p className="text-center text-xs text-gray-500 italic mt-2">
+      <p className="text-center text-xs text-gray-800 italic mt-2">
         Works on your phone. Yes, even on the toilet.
       </p>
     </div>

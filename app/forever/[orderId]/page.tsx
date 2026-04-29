@@ -213,7 +213,7 @@ export default async function ForeverPage({ params }: { params: Params }) {
           <p className="font-serif text-xl text-gray-700">
             Love{userName ? `, ${userName}` : ''}.
           </p>
-          <p className="text-xs text-gray-500 mt-3 italic">Mother&rsquo;s Day 2026</p>
+          <p className="text-xs text-gray-800 mt-3 italic">Mother&rsquo;s Day 2026</p>
         </footer>
       </div>
     </div>
@@ -248,7 +248,7 @@ function MessageCard({ day, text }: { day: 1 | 2 | 3 | 4 | 5 | 6 | 7; text: stri
         <p className="text-xs uppercase tracking-widest text-rose-700 font-semibold">
           Day {day} · {DAY_DATES[day - 1]}{isFinale ? ' · Mother’s Day' : ''}
         </p>
-        <p className="text-xs text-gray-400 italic">{DAY_THEMES[day - 1]}</p>
+        <p className="text-xs text-gray-700 italic">{DAY_THEMES[day - 1]}</p>
       </div>
       <p className="font-serif text-lg md:text-xl leading-relaxed text-gray-800 whitespace-pre-line">
         {text}

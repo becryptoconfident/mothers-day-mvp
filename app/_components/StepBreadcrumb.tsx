@@ -23,7 +23,7 @@ export function StepBreadcrumb(props: {
         </div>
       ) : null}
       {props.next ? (
-        <div className="text-xs text-gray-500 italic mt-1.5">Next: {props.next}</div>
+        <div className="text-xs text-gray-800 italic mt-1.5">Next: {props.next}</div>
       ) : null}
     </div>
   );
@@ -32,7 +32,7 @@ export function StepBreadcrumb(props: {
 export function NextLine({ text }: { text: string }) {
   return (
     <div className="border-y border-gray-200 py-3 mt-6 text-center">
-      <span className="text-xs text-gray-500 italic">Next: {text}</span>
+      <span className="text-xs text-gray-800 italic">Next: {text}</span>
     </div>
   );
 }

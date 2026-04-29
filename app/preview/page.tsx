@@ -182,7 +182,7 @@ export default function PreviewPage() {
     }
   }
 
-  if (!data) return <div className="p-8 text-center text-gray-500">Loading…</div>;
+  if (!data) return <div className="p-8 text-center text-gray-800">Loading…</div>;
 
   if (generating) {
     return (
@@ -226,8 +226,8 @@ export default function PreviewPage() {
         <p className="text-gray-600 mb-1">
           Days 1 and 2 are yours to read free. If they sound right, the other 5 are coming. Don&rsquo;t like them? Don&rsquo;t pay.
         </p>
-        <p className="text-xs text-gray-500 italic mb-1">Changes save automatically.</p>
-        <p className="text-sm text-gray-500 mb-8">
+        <p className="text-xs text-gray-800 italic mb-1">Changes save automatically.</p>
+        <p className="text-sm text-gray-800 mb-8">
           For: {data.contact.mom_name || 'mom'}
           {data.extraReminders ? ' · gentle 1pm nudges enabled' : ''}
         </p>
@@ -262,7 +262,7 @@ export default function PreviewPage() {
                     </div>
                     <div className="text-sm font-semibold mt-1">{DAY_THEMES[day - 1]}</div>
                   </div>
-                  <div className="text-xs text-gray-400">{text.length} chars</div>
+                  <div className="text-xs text-gray-700">{text.length} chars</div>
                 </div>
                 <textarea
                   value={text}
@@ -290,7 +290,7 @@ export default function PreviewPage() {
 
           {/* Locked Days 3-7 */}
           <div className="pt-4 pb-2">
-            <div className="text-center text-xs uppercase tracking-widest text-gray-500 mb-3">
+            <div className="text-center text-xs uppercase tracking-widest text-gray-800 mb-3">
               🔒 The other 5 unlock after you pay
             </div>
           </div>
@@ -304,7 +304,7 @@ export default function PreviewPage() {
               >
                 <div className="flex justify-between items-baseline">
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wide">
+                    <div className="text-xs text-gray-800 uppercase tracking-wide">
                       Day {day} · {DAY_DATES[day - 1]}
                       {day === 7 ? ' · Mother’s Day' : ''}
                     </div>
@@ -312,10 +312,10 @@ export default function PreviewPage() {
                       {DAY_THEMES[day - 1]}
                     </div>
                   </div>
-                  <div className="text-gray-400">🔒</div>
+                  <div className="text-gray-700">🔒</div>
                 </div>
                 <p
-                  className="font-serif text-base leading-relaxed text-gray-300 mt-3 select-none"
+                  className="font-serif text-base leading-relaxed text-gray-600 mt-3 select-none"
                   style={{ filter: 'blur(4px)', userSelect: 'none' }}
                   aria-hidden
                 >
@@ -352,7 +352,7 @@ export default function PreviewPage() {
           <div className="flex justify-between items-baseline mb-2">
             <div>
               <div className="text-sm text-gray-700 font-semibold">Like them? Unlock the other 5.</div>
-              <div className="text-xs text-gray-500">Edit until May 3rd. Refunds if it sucks.</div>
+              <div className="text-xs text-gray-800">Edit until May 3rd. Refunds if it sucks.</div>
             </div>
             <div className="text-3xl font-bold">${tierAmount}</div>
           </div>
@@ -469,7 +469,7 @@ function SaveMyWorkBanner(props: {
             {submitting ? 'Sending…' : 'Send me the link →'}
           </button>
           {error ? <p className="text-xs text-red-600">{error}</p> : null}
-          <p className="text-xs text-gray-500 italic">
+          <p className="text-xs text-gray-800 italic">
             We won&rsquo;t spam you. One email with one link. That&rsquo;s it.
           </p>
         </div>
@@ -534,7 +534,7 @@ function ForeverSetup(props: {
                 add a note →
               </button>
             ) : (
-              <span className={`text-xs ${noteLen > 500 ? 'text-red-600' : 'text-gray-500'}`}>
+              <span className={`text-xs ${noteLen > 500 ? 'text-red-600' : 'text-gray-800'}`}>
                 {noteLen}/500
               </span>
             )}
@@ -550,13 +550,13 @@ function ForeverSetup(props: {
               />
               <button
                 onClick={() => { props.setData({ ...props.data, long_note: '' }); setShowNote(false); }}
-                className="text-xs underline text-gray-500 mt-1"
+                className="text-xs underline text-gray-800 mt-1"
               >
                 skip — let AI write the whole letter
               </button>
             </>
           ) : (
-            <p className="text-xs text-gray-500 italic">
+            <p className="text-xs text-gray-800 italic">
               Skip if you want AI to write it all. Adding a note makes it more &ldquo;you.&rdquo;
             </p>
           )}
@@ -577,7 +577,7 @@ function ForeverSetup(props: {
             props.data.video_url ? (
               <div className="bg-gray-50 rounded-lg p-3 text-sm flex items-center gap-3">
                 <span className="text-green-700">✓ video uploaded</span>
-                <span className="text-gray-500 truncate flex-1">{props.data.video_url}</span>
+                <span className="text-gray-800 truncate flex-1">{props.data.video_url}</span>
                 <button
                   onClick={() => props.setData({ ...props.data, video_url: '' })}
                   className="text-xs text-red-600 underline"
@@ -603,20 +603,20 @@ function ForeverSetup(props: {
                   }}
                   className="sr-only"
                 />
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-gray-800 mt-2">
                   Record on your phone. Lands at the bottom of her page. MP4/MOV, ~200 MB max.
                 </p>
                 {uploadError ? <p className="text-xs text-red-600 mt-1">{uploadError}</p> : null}
                 <button
                   onClick={() => { props.setData({ ...props.data, video_url: '' }); setShowVideo(false); }}
-                  className="text-xs underline text-gray-500 mt-2"
+                  className="text-xs underline text-gray-800 mt-2"
                 >
                   skip — page works fine without one
                 </button>
               </>
             )
           ) : (
-            <p className="text-xs text-gray-500 italic">
+            <p className="text-xs text-gray-800 italic">
               Skip if you don&rsquo;t want to be on camera. The page is still beautiful.
             </p>
           )}
@@ -668,7 +668,7 @@ function MediaUploader(props: {
 
   return (
     <div className="mt-4 pt-4 border-t">
-      <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">Media for this day</div>
+      <div className="text-xs uppercase tracking-wide text-gray-800 mb-2">Media for this day</div>
       {props.current.length ? (
         <div className="space-y-2 mb-3">
           {props.current.map((m, idx) => (
@@ -677,7 +677,7 @@ function MediaUploader(props: {
               className="flex items-center gap-3 p-2 bg-gray-50 rounded text-sm"
             >
               <span className="capitalize text-gray-700">{m.type}</span>
-              <span className="text-gray-500 truncate flex-1">{m.url}</span>
+              <span className="text-gray-800 truncate flex-1">{m.url}</span>
               <button onClick={() => props.onRemove(idx)} className="text-red-600 text-xs">remove</button>
             </div>
           ))}
@@ -743,7 +743,7 @@ function MediaUploader(props: {
               Can&rsquo;t find a {pickedType}? Text someone to send you a few, save them, then come back.
             </div>
           </div>
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-gray-800">
             {pickedType === 'photo'
               ? 'JPG / PNG / GIF up to 10 MB'
               : pickedType === 'video'

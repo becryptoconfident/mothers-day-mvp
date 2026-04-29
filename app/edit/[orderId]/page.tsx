@@ -120,7 +120,7 @@ function EditFlow({ orderId }: { orderId: string }) {
   }
 
   if (!order) {
-    return <div className="p-8 text-center text-gray-500">Loading…</div>;
+    return <div className="p-8 text-center text-gray-800">Loading…</div>;
   }
 
   if (order.edit_locked) {
@@ -158,7 +158,7 @@ function EditFlow({ orderId }: { orderId: string }) {
   return (
     <>
       <h1 className="text-3xl font-bold mb-2">Edit your messages</h1>
-      <p className="text-sm text-gray-500 mb-4">
+      <p className="text-sm text-gray-800 mb-4">
         Order {order.id.slice(0, 8)} · {order.mom_email || order.user_email} · {savedMsg ? '✓ Saved' : 'auto-saved'}
       </p>
 
@@ -177,7 +177,7 @@ function EditFlow({ orderId }: { orderId: string }) {
       <div className="space-y-6 mb-8">
         {([1, 2, 3, 4, 5, 6, 7] as const).map((day) => (
           <div key={day} className="bg-white rounded-lg border p-5">
-            <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">
+            <div className="text-xs uppercase tracking-wide text-gray-800 mb-2">
               Day {day} · {DAY_DATES[day - 1]}
             </div>
             <textarea
@@ -223,7 +223,7 @@ function EditFlow({ orderId }: { orderId: string }) {
       </div>
 
       {error ? <p className="text-red-600 text-sm mb-4">{error}</p> : null}
-      {saving ? <p className="text-xs text-gray-500">Saving…</p> : null}
+      {saving ? <p className="text-xs text-gray-800">Saving…</p> : null}
     </>
   );
 }
@@ -298,7 +298,7 @@ function RequestLinkForm(props: {
         </button>
       </form>
       {props.error ? <p className="text-sm text-red-600 mt-3">{props.error}</p> : null}
-      <p className="text-xs text-gray-500 mt-6">
+      <p className="text-xs text-gray-800 mt-6">
         Order: <code className="bg-gray-100 px-1">{props.orderId.slice(0, 8)}</code>
       </p>
     </div>
@@ -310,7 +310,7 @@ function ReadOnlyMessages({ order }: { order: Order }) {
     <div className="space-y-4">
       {([1, 2, 3, 4, 5, 6, 7] as const).map((day) => (
         <div key={day} className="border-l-4 border-gray-200 pl-4">
-          <div className="text-xs text-gray-500">Day {day} · {DAY_DATES[day - 1]}</div>
+          <div className="text-xs text-gray-800">Day {day} · {DAY_DATES[day - 1]}</div>
           <p className="font-serif text-gray-700 mt-1">{order.messages[`day_${day}`]}</p>
         </div>
       ))}

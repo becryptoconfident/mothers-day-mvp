@@ -140,6 +140,8 @@ function BuilderInner() {
   const stepIndex = stepToIndex(step, tier);
   const totalSteps = totalStepsForTier(tier);
 
+  const STEP_ORDER: Step[] = ['q1', 'q2', 'q3', 'q4', 'contact', 'media-yn', 'media-days'];
+
   function next() {
     if (currentQuestion) {
       const order: Step[] = ['q1', 'q2', 'q3', 'q4', 'contact'];
@@ -164,6 +166,12 @@ function BuilderInner() {
       return;
     }
   }
+
+  function back() {
+    const idx = STEP_ORDER.indexOf(step);
+    if (idx > 0) setStep(STEP_ORDER[idx - 1]);
+  }
+  const canGoBack = step !== 'q1';
 
   function finish(addMedia: boolean, days: number[]) {
     const payload = {
@@ -232,13 +240,23 @@ function BuilderInner() {
           <MediaDaysScreen mediaDays={mediaDays} setMediaDays={setMediaDays} />
         ) : null}
 
-        <button
-          onClick={next}
-          disabled={!canAdvance}
-          className="mt-8 w-full bg-blue-600 text-white py-4 rounded-lg text-lg font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-700 transition"
-        >
-          {stepCopy.button}
-        </button>
+        <div className="mt-8 flex gap-3">
+          {canGoBack ? (
+            <button
+              onClick={back}
+              className="px-5 py-4 bg-white border-2 border-gray-300 text-gray-900 rounded-lg text-base font-semibold hover:bg-gray-50 transition"
+            >
+              ← Back
+            </button>
+          ) : null}
+          <button
+            onClick={next}
+            disabled={!canAdvance}
+            className="flex-1 bg-blue-600 text-white py-4 rounded-lg text-lg font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-700 transition"
+          >
+            {stepCopy.button}
+          </button>
+        </div>
 
         <NextLine text={stepCopy.next} />
       </div>
@@ -338,7 +356,7 @@ function QuestionScreen(props: {
         </div>
       ) : null}
       <h2 className="text-2xl md:text-3xl font-bold mb-2">{props.q.text}</h2>
-      <p className="text-sm text-gray-500 mb-4">
+      <p className="text-sm text-gray-800 mb-4">
         At least 20 characters — this helps AI write better messages.
       </p>
       <textarea
@@ -348,14 +366,14 @@ function QuestionScreen(props: {
         placeholder={props.q.placeholder}
       />
       <div className="flex justify-between items-center mb-4 text-sm">
-        <span className={enough ? 'text-green-700' : 'text-gray-500'}>
+        <span className={enough ? 'text-green-700' : 'text-gray-800'}>
           {enough ? '✓ Looks good' : 'Keep typing…'}
         </span>
-        <span className={`tabular-nums ${enough ? 'text-green-700' : 'text-gray-500'}`}>
+        <span className={`tabular-nums ${enough ? 'text-green-700' : 'text-gray-800'}`}>
           {len}/20 minimum
         </span>
       </div>
-      <p className="text-xs text-gray-500 italic mb-4">
+      <p className="text-xs text-gray-800 italic mb-4">
         Take your time. Your answer saves automatically.
       </p>
       <div className="bg-white border rounded-lg p-4 mb-2">
@@ -433,7 +451,7 @@ function ContactScreen(props: {
             <p>
               Sent at <strong>{contact.delivery_time || '08:00'}</strong> in <strong>{contact.delivery_timezone}</strong>.
             </p>
-            <p className="text-gray-500 mt-1 italic">
+            <p className="text-gray-800 mt-1 italic">
               We auto-detected your timezone from your browser. If that&rsquo;s wrong, the time shown
               above will be off — message us and we&rsquo;ll fix it.
             </p>

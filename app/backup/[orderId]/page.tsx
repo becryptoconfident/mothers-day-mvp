@@ -40,7 +40,7 @@ export default async function BackupPage(props: { params: Params }) {
         <p className="text-gray-700 mb-1">
           Your full set of 7 messages, in case the daily emails get lost or filtered.
         </p>
-        <p className="text-sm text-gray-500 mb-8">
+        <p className="text-sm text-gray-800 mb-8">
           For: {order.mom_name || 'mom'} · Bookmark this URL.
         </p>
 
@@ -57,7 +57,7 @@ export default async function BackupPage(props: { params: Params }) {
                 key={day}
                 className="border-l-4 border-rose-300 pl-4 py-2"
               >
-                <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">
+                <div className="text-xs uppercase tracking-wide text-gray-800 mb-2">
                   Day {day} of 7 · {DAY_DATES[day - 1]}
                 </div>
                 {text ? (
@@ -65,7 +65,7 @@ export default async function BackupPage(props: { params: Params }) {
                     {text}
                   </p>
                 ) : (
-                  <p className="text-sm text-gray-500 italic">
+                  <p className="text-sm text-gray-800 italic">
                     Not generated yet — pay first, then refresh.
                   </p>
                 )}
@@ -74,7 +74,7 @@ export default async function BackupPage(props: { params: Params }) {
           })}
         </div>
 
-        <div className="mt-12 pt-6 border-t text-sm text-gray-500">
+        <div className="mt-12 pt-6 border-t text-sm text-gray-800">
           <p>Order: <code className="bg-gray-100 px-1.5 py-0.5 rounded">{order.id.slice(0, 8)}</code></p>
           <p className="mt-2">
             Need to change something? Use <a className="underline" href={`/edit/${order.id}`}>the edit link</a> from your confirmation email.

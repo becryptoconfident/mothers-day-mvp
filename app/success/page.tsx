@@ -122,7 +122,7 @@ async function SuccessInner({ sessionId }: { sessionId?: string }) {
       <div className="bg-white border border-gray-200 rounded-lg p-5 mb-8">
         <p className="font-semibold mb-2">Email confirmation just sent to:</p>
         <p className="font-mono text-sm text-gray-700">{order.user_email}</p>
-        <p className="text-xs text-gray-500 mt-2 italic">
+        <p className="text-xs text-gray-800 mt-2 italic">
           Not in inbox in 5 minutes? Check spam, then add the sender to your contacts so future
           daily emails don&rsquo;t get filtered.
         </p>
@@ -167,7 +167,7 @@ async function SuccessInner({ sessionId }: { sessionId?: string }) {
             of payment). On May 10th at 9am we&rsquo;ll send it to you again so you can text the
             link to {order.mom_name || 'mom'} that morning.
           </p>
-          <p className="text-xs text-gray-500 mb-3">
+          <p className="text-xs text-gray-800 mb-3">
             Want to peek? The page exists, but the AI letter may still be rendering on the first visit.
           </p>
           <Link
@@ -197,7 +197,7 @@ function StatusRow(props: {
   children: React.ReactNode;
 }) {
   const icon = props.done ? '✓' : props.now ? '→' : '□';
-  const iconColor = props.done ? 'text-green-600' : props.now ? 'text-rose-500' : 'text-gray-400';
+  const iconColor = props.done ? 'text-green-600' : props.now ? 'text-rose-500' : 'text-gray-700';
   return (
     <div className="flex items-start gap-3">
       <span className={`text-xl font-bold ${iconColor} leading-tight w-5`}>{icon}</span>

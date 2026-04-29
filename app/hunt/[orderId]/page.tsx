@@ -63,7 +63,7 @@ export default function HuntPage(props: { params: Promise<{ orderId: string }> }
   if (!hunt) {
     return (
       <Wrap>
-        <p className="text-gray-500 italic">Loading…</p>
+        <p className="text-gray-800 italic">Loading…</p>
       </Wrap>
     );
   }
@@ -95,7 +95,7 @@ export default function HuntPage(props: { params: Promise<{ orderId: string }> }
 
   return (
     <Wrap>
-      <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">
+      <div className="text-xs uppercase tracking-wide text-gray-800 mb-2">
         Clue {idx + 1} of {clues.length}
       </div>
       <div className="w-full bg-gray-200 h-1 rounded-full mb-8">
@@ -133,7 +133,7 @@ export default function HuntPage(props: { params: Promise<{ orderId: string }> }
         <button
           onClick={showHint}
           disabled={hintsShown >= 3}
-          className="px-6 py-2 text-sm text-gray-600 underline disabled:text-gray-400 disabled:no-underline"
+          className="px-6 py-2 text-sm text-gray-600 underline disabled:text-gray-700 disabled:no-underline"
         >
           {hintsShown >= 3 ? 'No more hints' : `Need a hint? (${3 - hintsShown} left)`}
         </button>
@@ -161,7 +161,7 @@ function Finale({ hunt }: { hunt: HuntData }) {
           )}
         </div>
       ) : null}
-      <p className="text-sm text-gray-500">— {fromName}</p>
+      <p className="text-sm text-gray-800">— {fromName}</p>
     </Wrap>
   );
 }
