@@ -118,21 +118,59 @@ def test_anthropic() -> Dict:
         return {"ok": False, "error": str(e)[:240]}
 
 
+def detect_warning(key: str, value: str) -> str:
+    """Return a warning string if the value looks wrong for its key, else ''.
+    These are detection rules — not exhaustive validation, just sanity checks
+    for the common ways people paste the wrong thing into the wrong slot."""
+    if not value:
+        return ""
+    if key == "SUPABASE_SECRET_KEY" and value.startswith("sb_publishable_"):
+        return "wrong key — this is a publishable key. Need sb_secret_… (Supabase → API Keys → reveal Secret)"
+    if key == "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" and value.startswith("sb_secret_"):
+        return "wrong key — this is the secret key. Need sb_publishable_… (browser-safe)"
+    if key == "STRIPE_SECRET_KEY" and not (value.startswith("sk_") or value.startswith("sb_secret_") or value.startswith("rk_")):
+        return "doesn't look like a Stripe secret key (expected sk_ / sb_secret_ / rk_)"
+    if key == "STRIPE_WEBHOOK_SECRET" and not value.startswith("whsec_"):
+        return "doesn't look like a Stripe webhook secret (expected whsec_…)"
+    if key == "ANTHROPIC_API_KEY" and not value.startswith("sk-ant-"):
+        return "doesn't look like an Anthropic key (expected sk-ant-…)"
+    if key == "RESEND_API_KEY" and not value.startswith("re_"):
+        return "doesn't look like a Resend key (expected re_…)"
+    return ""
+
+
 def render_page(rows: List[Tuple[str, str, bool]], flash: str = "") -> str:
     flash_html = f'<div class="flash">{html.escape(flash)}</div>' if flash else ""
     row_html = []
     for k, v, is_set in rows:
+        warning = detect_warning(k, v)
+        is_warning = bool(warning)
         masked = html.escape(mask(v))
-        status_dot = "●" if is_set else "○"
-        status_class = "set" if is_set else "unset"
+        status_dot = "⚠" if is_warning else ("●" if is_set else "○")
+        if is_warning:
+            status_class = "warning"
+        elif is_set:
+            status_class = "set"
+        else:
+            status_class = "unset"
+        # On warning rows: clear the masked placeholder so user sees a clean
+        # input ready for the new value (instead of stale •••• that they have
+        # to wonder about).
+        placeholder = "" if is_warning else (masked or "paste new value")
+        if not placeholder:
+            placeholder = "paste correct value here"
+        warning_html = (
+            f'<div class="warning-text">⚠ {html.escape(warning)}</div>'
+            if is_warning else ""
+        )
         row_html.append(f"""
         <form method="POST" action="/save" class="row {status_class}">
           <span class="dot">{status_dot}</span>
           <label>{html.escape(k)}</label>
-          <input type="password" name="value" placeholder="{masked or 'paste new value'}" autocomplete="off">
+          <input type="password" name="value" placeholder="{placeholder}" autocomplete="off">
           <input type="hidden" name="key" value="{html.escape(k)}">
           <button type="submit">save</button>
-        </form>""")
+        </form>{warning_html}""")
     rows_html = "\n".join(row_html)
     return f"""<!doctype html>
 <html><head><meta charset="utf-8"><title>autonomous_empire — secrets</title>
@@ -144,8 +182,13 @@ def render_page(rows: List[Tuple[str, str, bool]], flash: str = "") -> str:
   .row {{ display: grid; grid-template-columns: 24px 220px 1fr 80px;
           align-items: center; gap: 10px; padding: 6px 0;
           border-bottom: 1px solid #eee; }}
-  .dot {{ color: #ccc; }}
+  .dot {{ color: #ccc; font-weight: bold; }}
   .set .dot {{ color: #3a3; }}
+  .warning {{ background: #fff8dc; border-bottom-color: #e5c773; }}
+  .warning .dot {{ color: #b78003; }}
+  .warning input[type=password] {{ border-color: #e5c773; background: #fffceb; }}
+  .warning-text {{ background: #fff8dc; color: #6b4d00; padding: 4px 12px 8px 58px;
+          font-size: 12px; border-bottom: 1px solid #eee; margin-top: -1px; }}
   label {{ font-family: ui-monospace, monospace; font-size: 13px; }}
   input[type=password] {{ font-family: ui-monospace, monospace;
           padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; }}
