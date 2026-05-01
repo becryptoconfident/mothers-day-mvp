@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { verifyEditToken } from '@/lib/auth';
-import { isEditWindowOpen, deliveryISOForDay } from '@/lib/dates';
-import { sendEmail, cancelEmail } from '@/lib/resend';
-import { dailyMessageEmail, gentleReminderEmail } from '@/lib/email-templates';
+import { isEditWindowOpen } from '@/lib/dates';
+import { cancelEmail } from '@/lib/resend';
+import { scheduleDailyEmails } from '@/lib/email-scheduler';
 
 const EDITABLE_FIELDS = new Set([
   'messages',
@@ -13,9 +13,7 @@ const EDITABLE_FIELDS = new Set([
   'user_name',
   'delivery_time',
   'delivery_timezone',
-  'extra_reminders',
-  'hunt_clues',
-  'hunt_finale',
+  'language',
 ]);
 
 export async function GET(req: Request) {
@@ -76,77 +74,34 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: updateErr.message }, { status: 500 });
     }
 
-    // If messages, media, or delivery preferences changed → cancel & re-schedule daily emails
+    // If anything that affects scheduled-message content/timing changed →
+    // cancel all Resend-scheduled emails AND clear the sent_emails claims so
+    // the scheduler can re-claim and re-send.
     const reschedule =
       'messages' in update ||
       'media' in update ||
       'delivery_time' in update ||
-      'delivery_timezone' in update ||
-      'extra_reminders' in update;
+      'delivery_timezone' in update;
 
     if (reschedule) {
       const merged = { ...existing, ...update };
       const oldIds = (existing.scheduled_email_ids || {}) as Record<string, string>;
-      const newIds: Record<string, string> = { ...oldIds };
 
-      const morningTime = merged.delivery_time || '08:00';
-      for (let day = 1; day <= 7; day++) {
-        const oldId = oldIds[`day_${day}`];
-        if (oldId) await cancelEmail(oldId);
-        const oldGentleId = oldIds[`gentle_${day}`];
-        if (oldGentleId) await cancelEmail(oldGentleId);
-
-        const message = merged.messages[`day_${day}`];
-        if (!message) continue;
-        const dayMedia = (merged.media || []).filter((m: { day: number }) => m.day === day);
-        const tpl = dailyMessageEmail({
-          day: day as 1 | 2 | 3 | 4 | 5 | 6 | 7,
-          message,
-          momName: merged.mom_name || undefined,
-          media: dayMedia,
-          isFinale: day === 7,
-        });
-        const sendAt = deliveryISOForDay(
-          day as 1 | 2 | 3 | 4 | 5 | 6 | 7,
-          morningTime,
-          merged.delivery_timezone,
-        );
-        const r = await sendEmail({
-          to: merged.user_email,
-          subject: tpl.subject,
-          html: tpl.html,
-          scheduledAt: sendAt,
-          tag: `day-${day}`,
-        });
-        if (r.ok) newIds[`day_${day}`] = r.id;
-        else delete newIds[`day_${day}`];
-
-        if (merged.extra_reminders) {
-          const gentleTpl = gentleReminderEmail({
-            day: day as 1 | 2 | 3 | 4 | 5 | 6 | 7,
-            message,
-            momName: merged.mom_name || undefined,
-          });
-          const gentleAt = deliveryISOForDay(
-            day as 1 | 2 | 3 | 4 | 5 | 6 | 7,
-            '13:00',
-            merged.delivery_timezone,
-          );
-          const gr = await sendEmail({
-            to: merged.user_email,
-            subject: gentleTpl.subject,
-            html: gentleTpl.html,
-            scheduledAt: gentleAt,
-            tag: `gentle-${day}`,
-          });
-          if (gr.ok) newIds[`gentle_${day}`] = gr.id;
-          else delete newIds[`gentle_${day}`];
-        }
+      for (const id of Object.values(oldIds)) {
+        if (id) await cancelEmail(id);
       }
 
       await supabaseAdmin
+        .from('sent_emails')
+        .delete()
+        .eq('order_id', orderId)
+        .in('email_type', ['message_day_1', 'message_day_2', 'message_day_3']);
+
+      const { scheduledIds } = await scheduleDailyEmails(merged);
+
+      await supabaseAdmin
         .from('orders')
-        .update({ scheduled_email_ids: newIds })
+        .update({ scheduled_email_ids: scheduledIds })
         .eq('id', orderId);
     }
 

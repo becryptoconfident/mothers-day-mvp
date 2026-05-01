@@ -2,18 +2,14 @@
 // owner. Mother's Day 2026 = Sunday, May 10 (second Sunday).
 
 export const DELIVERY_DATES = [
-  '2026-05-04', // Day 1
-  '2026-05-05', // Day 2
-  '2026-05-06', // Day 3
-  '2026-05-07', // Day 4
-  '2026-05-08', // Day 5
-  '2026-05-09', // Day 6
-  '2026-05-10', // Day 7 — Mother's Day morning
+  '2026-05-08', // Message 1 — Friday (the memory)
+  '2026-05-09', // Message 2 — Saturday (the thing she does)
+  '2026-05-10', // Message 3 — Sunday, Mother's Day morning (the unsaid thing)
 ] as const;
 
-export const EDIT_CLOSE_DATE = '2026-05-03';     // 23:59 user-local
-export const HUNT_REMINDER_DATE = '2026-05-09';  // 18:00 user-local — sent night before
-export const HUNT_DAY = '2026-05-10';            // Mother's Day; user texts link to mom
+export const EDIT_CLOSE_DATE = '2026-05-07';     // 23:59 user-local — day before first send
+export const HUNT_REMINDER_DATE = '2026-05-09';  // legacy, hunt feature retired
+export const HUNT_DAY = '2026-05-10';            // legacy, hunt feature retired
 
 /**
  * Convert "YYYY-MM-DD" + "HH:MM" + IANA timezone → ISO UTC string.
@@ -46,7 +42,7 @@ export function localToUTC(dateStr: string, timeStr: string, ianaTz: string): st
 }
 
 export function deliveryISOForDay(
-  day: 1 | 2 | 3 | 4 | 5 | 6 | 7,
+  day: 1 | 2 | 3,
   timeStr: string,
   ianaTz: string,
 ): string {
@@ -68,6 +64,17 @@ export function ordinal(n: number): string {
     case 3: return `${n}rd`;
     default: return `${n}th`;
   }
+}
+
+/** "09:00" → "9am". "13:30" → "1:30pm". "00:00" → "12am". Bad input → returned as-is. */
+export function formatTime12(hhmm: string): string {
+  const [hStr, mStr] = (hhmm || '').split(':');
+  const h = Number(hStr);
+  const m = Number(mStr);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return hhmm;
+  const period = h >= 12 ? 'pm' : 'am';
+  const h12 = ((h + 11) % 12) + 1;
+  return m === 0 ? `${h12}${period}` : `${h12}:${String(m).padStart(2, '0')}${period}`;
 }
 
 /** Friendly e.g. "Monday, May 4th" */

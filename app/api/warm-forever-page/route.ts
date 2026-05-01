@@ -20,14 +20,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'orderId required' }, { status: 400 });
     }
 
+    // Don't select `language` directly — the column may not exist yet. Pull
+    // language from forever_data (where create-checkout / save-progress also stash it).
     const { data: order, error } = await supabaseAdmin
       .from('orders')
-      .select('id,tier,paid,user_name,mom_name,question_1,question_2,question_3,question_4,forever_data')
+      .select('id,paid,user_name,mom_name,question_1,question_2,question_3,question_4,forever_data')
       .eq('id', orderId)
       .maybeSingle();
     if (error || !order) return NextResponse.json({ error: 'not found' }, { status: 404 });
-    if (!order.paid || order.tier !== 3) {
-      return NextResponse.json({ ok: true, skipped: 'not paid tier-3' });
+    if (!order.paid) {
+      return NextResponse.json({ ok: true, skipped: 'not paid' });
     }
 
     const fd = order.forever_data || {};
@@ -40,9 +42,10 @@ export async function POST(req: Request) {
       fd.generated_letter ||
       (await generateForeverLetter({
         cleanedAnswers: cleaned,
-        longNote: fd.long_note,
         userName: order.user_name || undefined,
+        momNickname: fd.mom_nickname || undefined,
         momName: order.mom_name || undefined,
+        language: fd.language || undefined,
       }));
 
     await supabaseAdmin

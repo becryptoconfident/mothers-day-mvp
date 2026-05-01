@@ -57,33 +57,96 @@ function extractYoutubeId(url: string): string | null {
 
 // Daily morning email TO THE BUYER — they copy and text it to their mom.
 // Uses the ND-safe ✓ done / → now / next: pattern.
+// Day 3 (Mother's Day) is the finale and includes the forever-page link.
 export function dailyMessageEmail(args: {
-  day: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  day: 1 | 2 | 3;
   message: string;
   momName?: string;
   media?: MediaItem[];
-  isFinale?: boolean;
+  foreverUrl?: string;
+  landingUrl?: string;
+  contributeUrl?: string;
 }): { subject: string; html: string } {
-  const { day, message, momName, media = [], isFinale } = args;
-  const fillPercent = (day / 7) * 100;
+  const { day, message, momName, media = [], foreverUrl, landingUrl, contributeUrl } = args;
+  const isFinale = day === 3;
+  const fillPercent = (day / 3) * 100;
   const who = momName ? escapeHTML(momName) : 'mom';
   const whoCap = who.charAt(0).toUpperCase() + who.slice(1);
 
   const doneLine = day > 1
-    ? `<div style="color:#15803d;font-size:13px;font-weight:500;">✓ Sent Day ${day - 1} yesterday</div>`
+    ? `<div style="color:#15803d;font-size:13px;font-weight:500;">✓ Sent Message ${day - 1} yesterday</div>`
     : '';
-  const currentLine = `<div style="color:#111827;font-size:15px;font-weight:600;margin-top:4px;">→ Day ${day} of 7 — copy and text to ${who}</div>`;
+  const currentLine = `<div style="color:#111827;font-size:15px;font-weight:600;margin-top:4px;">→ Message ${day} of 3 — copy and text to ${who}</div>`;
   const nextLine = isFinale
-    ? `<div style="color:#6b7280;font-size:12px;font-style:italic;margin-top:6px;">Next: that's Day 7. You did it.</div>`
-    : day === 6
-      ? `<div style="color:#6b7280;font-size:12px;font-style:italic;margin-top:6px;">Next: Day 7 — Mother's Day morning — drops in your inbox tomorrow.</div>`
-      : `<div style="color:#6b7280;font-size:12px;font-style:italic;margin-top:6px;">Next: Day ${day + 1} hits your inbox tomorrow morning.</div>`;
+    ? `<div style="color:#6b7280;font-size:12px;font-style:italic;margin-top:6px;">Next: that's the whole sequence. You did it.</div>`
+    : day === 2
+      ? `<div style="color:#6b7280;font-size:12px;font-style:italic;margin-top:6px;">Next: Message 3 — Mother's Day morning — drops in your inbox tomorrow.</div>`
+      : `<div style="color:#6b7280;font-size:12px;font-style:italic;margin-top:6px;">Next: Message 2 hits your inbox tomorrow morning.</div>`;
+
+  // Action buttons: Text Mom / Email Mom. Copy isn't possible in HTML email
+  // (no JS), so we let the user select the styled message block manually.
+  const smsHref = `sms:?body=${encodeURIComponent(message)}`;
+  const mailSubject = momName ? `For you, ${momName}` : '💌';
+  const mailHref = `mailto:?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(message)}`;
+  const actions = `
+    <p style="font-size:14px;color:#6b7280;margin:18px 0 8px;font-family:-apple-system,system-ui,sans-serif;">
+      Send it however works:
+    </p>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:6px;">
+      <tr>
+        <td style="padding-right:8px;">
+          <a href="${escapeHTML(smsHref)}" style="display:inline-block;padding:10px 14px;background:#3b82f6;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;">💬 Text Mom</a>
+        </td>
+        <td>
+          <a href="${escapeHTML(mailHref)}" style="display:inline-block;padding:10px 14px;background:#fff;color:#3b82f6;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;border:1px solid #3b82f6;">📧 Email Mom</a>
+        </td>
+      </tr>
+    </table>`;
+
+  // Day 3 only — forever link (clean, for sharing to mom) + edit link for the
+  // creator + the high-emotion contribute ask.
+  const foreverEditUrl = foreverUrl ? `${foreverUrl}?edit=true` : '';
+  const foreverSection = isFinale && foreverUrl
+    ? `
+    <div style="margin-top:32px;padding-top:24px;border-top:1px solid #e5e7eb;">
+      <p style="font-size:16px;color:#374151;margin:0 0 12px;line-height:1.6;">
+        We made something for her — send her this link:
+      </p>
+      <p style="margin:0 0 12px;"><a href="${escapeHTML(foreverUrl)}" style="color:#9f1239;font-family:ui-monospace,monospace;font-size:14px;word-break:break-all;">${escapeHTML(foreverUrl)}</a></p>
+      <p style="font-size:14px;color:#6b7280;margin:0 0 8px;line-height:1.6;">
+        A private page she can keep forever. All your messages, your photos, a letter from you.
+      </p>
+      <p style="font-size:14px;color:#6b7280;margin:0 0 16px;line-height:1.6;">
+        You can always add more photos later — even one from today. <a href="${escapeHTML(foreverEditUrl)}" style="color:#e11d48;font-weight:500;">Edit your page →</a>
+      </p>
+      <p style="font-size:15px;color:#374151;margin:0 0 20px;line-height:1.6;font-style:italic;">
+        Happy Mother&rsquo;s Day. You did it. She&rsquo;s going to love this.
+      </p>
+      ${landingUrl || contributeUrl
+        ? `<p style="font-size:14px;color:#6b7280;margin:0;line-height:1.6;">
+            If this meant something to you${landingUrl ? `, <a href="${escapeHTML(landingUrl)}" style="color:#e11d48;font-weight:500;">share it</a>` : ''}${landingUrl && contributeUrl ? ' or ' : ''}${contributeUrl ? `<a href="${escapeHTML(contributeUrl)}" style="color:#e11d48;font-weight:500;">help keep it free</a>` : ''}.
+          </p>`
+        : ''}
+    </div>`
+    : '';
+
+  // Footer pitch: normal weight on Days 1+2 only. Day 3's contribute ask
+  // lives inside foreverSection (right after "Happy Mother's Day") so it
+  // catches the emotional peak. No duplicate footer pitch on day 3.
+  const footerPitch = !isFinale && (landingUrl || contributeUrl)
+    ? `
+    <p style="font-size:15px;color:#6b7280;margin-top:28px;line-height:1.55;">
+      ${landingUrl ? `Know someone who needs this? <a href="${escapeHTML(landingUrl)}" style="color:#e11d48;font-weight:500;">Share the link</a> — it&rsquo;s free.` : ''}
+      ${landingUrl && contributeUrl ? '<br>' : ''}
+      ${contributeUrl ? `<a href="${escapeHTML(contributeUrl)}" style="color:#e11d48;font-weight:500;">Contribute</a> to keep it running.` : ''}
+    </p>`
+    : '';
 
   const inner = `
     <div style="border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:14px 0;margin-bottom:18px;">
       ${doneLine}
       ${currentLine}
-      <div style="width:100%;background:#e5e7eb;border-radius:9999px;height:5px;margin:9px 0;">
+      <div style="width:100%;background:#e5e7eb;border-radius:9999px;height:5px;margin:9px 0;" role="progressbar" aria-valuenow="${day}" aria-valuemin="0" aria-valuemax="3" aria-label="Message ${day} of 3">
         <div style="background:#3b82f6;height:5px;border-radius:9999px;width:${fillPercent}%;"></div>
       </div>
       ${nextLine}
@@ -96,31 +159,35 @@ export function dailyMessageEmail(args: {
     </div>
     ${renderMedia(media)}
     ${media.length ? `<p style="font-size:13px;color:#6b7280;margin-top:8px;">↑ Attach the file above to your text too. Long-press → save → attach.</p>` : ''}
-    <p style="font-size:14px;color:#6b7280;margin-top:20px;">
-      Copy it. Paste in a text to ${who}. Send. Done. Takes 30 seconds.
+    ${actions}
+    <p style="font-size:14px;color:#6b7280;margin-top:18px;">
+      Or just select the message above, copy, and paste into your texts. ~30 seconds.
     </p>
     <p style="font-size:14px;color:#6b7280;margin-top:6px;">${whoCap} will think you&rsquo;ve been planning for a month.</p>
+    ${foreverSection}
+    ${footerPitch}
     <div class="footer">
       <p>— Memphis</p>
+      <p style="margin-top:10px;font-size:12px;color:#9ca3af;">We email YOU. You text ${who}. We never message her directly.</p>
     </div>`;
   return {
     subject: isFinale
-      ? `Day 7 of 7 — Mother's Day Message Ready (30 seconds)`
-      : `Day ${day} of 7 — Your Message is Ready (30 seconds)`,
-    html: wrap(`Day ${day} of 7`, inner),
+      ? `Message 3 of 3 — Mother's Day morning (30 seconds)`
+      : `Message ${day} of 3 — Your message is ready (30 seconds)`,
+    html: wrap(`Message ${day} of 3`, inner),
   };
 }
 
 // Optional afternoon nudge for the ADHD / neurodivergent crowd. Calming tone.
 export function gentleReminderEmail(args: {
-  day: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  day: 1 | 2 | 3;
   message: string;
   momName?: string;
 }): { subject: string; html: string } {
   const { day, message, momName } = args;
   const who = momName ? escapeHTML(momName) : 'mom';
   const inner = `
-    <div class="progress">Day ${day} · gentle nudge</div>
+    <div class="progress">Message ${day} of 3 · gentle nudge</div>
     <p style="font-size:18px;color:#374151;margin:0 0 16px;font-family:Georgia,serif;line-height:1.6;">
       Hey. No pressure. Just a soft nudge.
     </p>
@@ -137,41 +204,89 @@ export function gentleReminderEmail(args: {
     </p>
     <div class="footer">
       <p>— Memphis<br>(another neurodivergent dude making things for messes)</p>
+      <p style="margin-top:10px;font-size:12px;color:#9ca3af;">We email YOU. You text ${who}. We never message her directly.</p>
     </div>`;
   return {
-    subject: `gentle nudge — Day ${day}`,
-    html: wrap(`Gentle reminder — Day ${day}`, inner),
+    subject: `gentle nudge — Message ${day} of 3`,
+    html: wrap(`Gentle reminder — Message ${day}`, inner),
   };
 }
 
 export function confirmationEmail(args: {
   orderId: string;
-  tier: 1 | 2 | 3;
   momName?: string;
   editUrl: string;
   firstSendDate: string; // pretty
+  isFree?: boolean;
+  landingUrl?: string;
+  contributeUrl?: string;
 }): { subject: string; html: string } {
-  const tierLabel = args.tier === 1
-    ? 'Mother Lover Package'
-    : args.tier === 2
-      ? 'Mother Lover Package + Feels'
-      : 'Mother Lover Package + Feels + Adventure';
+  const who = args.momName ? escapeHTML(args.momName) : 'mom';
+  const headerLine = args.isFree ? '✓ You&rsquo;re in' : '✓ Paid';
+  const tipLine =
+    args.landingUrl || args.contributeUrl
+      ? `<p style="margin-top:14px;font-size:13px;color:#777;line-height:1.5;">
+          This is free for everyone.
+          ${args.landingUrl ? ` Share: <a href="${escapeHTML(args.landingUrl)}" style="color:#e11d48;">${escapeHTML(args.landingUrl)}</a>` : ''}
+          ${args.landingUrl && args.contributeUrl ? ' · ' : ''}
+          ${args.contributeUrl ? `Contribute: <a href="${escapeHTML(args.contributeUrl)}" style="color:#e11d48;">tip jar</a>` : ''}
+        </p>`
+      : '';
   const inner = `
     <div style="border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:14px 0;margin-bottom:18px;">
-      <div style="color:#15803d;font-size:13px;font-weight:500;">✓ Paid for your ${escapeHTML(tierLabel)}</div>
-      <div style="color:#111827;font-size:15px;font-weight:600;margin-top:4px;">→ All set. Nothing else for you to do until May 4th.</div>
-      <div style="color:#6b7280;font-size:12px;font-style:italic;margin-top:6px;">Next: First morning email lands ${escapeHTML(args.firstSendDate)}. We&rsquo;ll nudge you each morning through Mother&rsquo;s Day.</div>
+      <div style="color:#15803d;font-size:13px;font-weight:500;">${headerLine}</div>
+      <div style="color:#111827;font-size:15px;font-weight:600;margin-top:4px;">→ All set. Nothing else for you to do until ${escapeHTML(args.firstSendDate)}.</div>
+      <div style="color:#6b7280;font-size:12px;font-style:italic;margin-top:6px;">Next: First morning email lands ${escapeHTML(args.firstSendDate)}. Two more after that, through Mother&rsquo;s Day.</div>
     </div>
     <h1 style="font-family:-apple-system,system-ui,sans-serif;font-size:24px;margin:0 0 16px;">You&rsquo;re set.</h1>
-    <p>Starting <strong>${escapeHTML(args.firstSendDate)}</strong>, we email <em>you</em> each morning with that day&rsquo;s message. Copy it. Paste in a text to ${args.momName ? escapeHTML(args.momName) : 'mom'}. Send. Done. ~30 seconds a day.</p>
-    <p style="margin-top:24px;">Want to change something? Edit messages, photos, or your delivery time until <strong>May 3rd, 11:59pm</strong>:</p>
+    <p>Starting <strong>${escapeHTML(args.firstSendDate)}</strong>, we email you each morning with that day&rsquo;s message. Copy it. Paste in a text to ${who}. Send. Done. ~30 seconds a day. Three messages total — Friday, Saturday, Sunday morning.</p>
+    <p style="margin-top:24px;">Want to change something? Edit messages, photos, or your delivery time:</p>
     <p style="margin-top:8px;"><a href="${escapeHTML(args.editUrl)}" style="display:inline-block;padding:12px 20px;background:#3b82f6;color:#fff;text-decoration:none;border-radius:6px;">Edit your messages</a></p>
     <div class="footer">
-      <p>Order ${escapeHTML(args.orderId.slice(0, 8))}. Reply if anything looks off — I refund if it sucks.</p>
+      <p>Order ${escapeHTML(args.orderId.slice(0, 8))}. Reply if anything looks off.</p>
       <p style="margin-top:14px;font-family:Georgia,serif;color:#9f1239;">#doitforbonnie</p>
       <p style="font-size:11px;color:#9ca3af;font-style:italic;">Built this for my mom Bonnie. Use the tag with yours.</p>
+      <p style="margin-top:10px;font-size:12px;color:#9ca3af;">We email YOU. You text ${who}. We never message her directly.</p>
+      ${tipLine}
     </div>`;
   return { subject: 'Mother’s Day — confirmed', html: wrap('Confirmed', inner) };
+}
+
+// May 7th 7pm reminder — "tomorrow it starts."
+export function reminderEveEmail(args: {
+  momName?: string;
+  landingUrl?: string;
+  contributeUrl?: string;
+}): { subject: string; html: string } {
+  const who = args.momName ? escapeHTML(args.momName) : 'mom';
+  const tipLine =
+    args.landingUrl || args.contributeUrl
+      ? `<p style="margin-top:14px;font-size:13px;color:#777;line-height:1.5;">
+          This is free for everyone.
+          ${args.landingUrl ? ` Share: <a href="${escapeHTML(args.landingUrl)}" style="color:#e11d48;">${escapeHTML(args.landingUrl)}</a>` : ''}
+          ${args.landingUrl && args.contributeUrl ? ' · ' : ''}
+          ${args.contributeUrl ? `Contribute: <a href="${escapeHTML(args.contributeUrl)}" style="color:#e11d48;">tip jar</a>` : ''}
+        </p>`
+      : '';
+  const inner = `
+    <h1 style="font-family:-apple-system,system-ui,sans-serif;font-size:22px;margin:0 0 16px;">Tomorrow morning, it starts ✉️</h1>
+    <p style="font-size:16px;color:#374151;line-height:1.7;">
+      Hey — your 1st message arrives tomorrow at 9am.
+    </p>
+    <p style="font-size:16px;color:#374151;line-height:1.7;margin-top:14px;">
+      When it lands, just copy and send it to ${who}. That&rsquo;s it. 30 seconds.
+    </p>
+    <p style="font-size:16px;color:#374151;line-height:1.7;margin-top:14px;">
+      3 messages over 3 days. She&rsquo;s going to love it.
+    </p>
+    <p style="font-size:15px;color:#374151;line-height:1.7;margin-top:18px;font-style:italic;">
+      Talk tomorrow.
+    </p>
+    <div class="footer">
+      <p>— Memphis</p>
+      ${tipLine}
+    </div>`;
+  return { subject: 'Tomorrow morning, it starts ✉️', html: wrap('Tomorrow', inner) };
 }
 
 export function editClosingReminderEmail(args: { editUrl: string }): { subject: string; html: string } {
@@ -179,7 +294,10 @@ export function editClosingReminderEmail(args: { editUrl: string }): { subject: 
     <h1 style="font-family:-apple-system,system-ui,sans-serif;font-size:22px;margin:0 0 16px;">Last chance to edit</h1>
     <p>Edit window closes tonight at 11:59pm. After that, messages are locked in.</p>
     <p style="margin-top:24px;"><a href="${escapeHTML(args.editUrl)}" style="display:inline-block;padding:12px 20px;background:#3b82f6;color:#fff;text-decoration:none;border-radius:6px;">Review &amp; edit</a></p>
-    <div class="footer"><p>If everything looks good, ignore this.</p></div>`;
+    <div class="footer">
+      <p>If everything looks good, ignore this.</p>
+      <p style="margin-top:10px;font-size:12px;color:#9ca3af;">We email YOU. You text mom. We never message her directly.</p>
+    </div>`;
   return { subject: 'Last chance to edit (closes tonight)', html: wrap('Last chance', inner) };
 }
 
@@ -195,7 +313,9 @@ export function huntReminderEmail(args: { huntUrl: string; momName?: string }): 
   return { subject: 'Hunt link — send tomorrow morning', html: wrap('Hunt reminder', inner) };
 }
 
-// Mother's Day morning email for Tier 3 — links to the Forever Page.
+// Standalone forever-page email. In the new flow, the forever-page link is
+// inlined into Message 3 (Mother's Day morning), so this function isn't
+// scheduled by default — kept exported for any caller that wants it explicitly.
 export function foreverPageEmail(args: {
   foreverUrl: string;
   momName?: string;
@@ -204,7 +324,7 @@ export function foreverPageEmail(args: {
   const who = args.momName ? escapeHTML(args.momName) : 'mom';
   const inner = `
     <div style="border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:14px 0;margin-bottom:18px;">
-      <div style="color:#15803d;font-size:13px;font-weight:500;">✓ All 7 daily messages sent</div>
+      <div style="color:#15803d;font-size:13px;font-weight:500;">✓ All 3 messages sent</div>
       <div style="color:#111827;font-size:15px;font-weight:600;margin-top:4px;">→ Mother's Day morning — your Forever Page is ready</div>
       <div style="color:#6b7280;font-size:12px;font-style:italic;margin-top:6px;">Next: send ${who} the link, then go enjoy the day.</div>
     </div>
@@ -218,14 +338,14 @@ export function foreverPageEmail(args: {
       </p>
     </div>
     <p style="font-size:14px;color:#6b7280;margin-top:20px;">
-      She&rsquo;ll open it on her phone. All 7 messages, your photos, the letter, your video — all in one place.
-      She can share it with family. She can come back to it forever.
+      All 3 messages, your photos, and the letter — all on one page. She can share it. She can come back to it forever.
     </p>
     <p style="font-size:14px;color:#6b7280;margin-top:14px;">
       Suggested message: &ldquo;Happy Mother&rsquo;s Day. I made you something. ${escapeHTML(args.foreverUrl)}&rdquo;
     </p>
     <div class="footer">
       <p>That&rsquo;s the whole thing. You did it.<br>— Memphis</p>
+      <p style="margin-top:10px;font-size:12px;color:#9ca3af;">We email YOU. You text ${who}. We never message her directly.</p>
     </div>`;
   return {
     subject: `Send this to ${who} — your Mother's Day page is ready`,
@@ -234,36 +354,20 @@ export function foreverPageEmail(args: {
 }
 
 // Pre-payment "save my work" email — gives the user a link to come back to
-// their unfinished /preview state. Encourages tier upgrades by hinting at media.
+// their unfinished /preview state. Pay-what-you-want, no tier upsell.
 export function saveProgressEmail(args: {
   resumeUrl: string;
   momName?: string;
-  tier: 1 | 2 | 3;
 }): { subject: string; html: string } {
   const who = args.momName ? escapeHTML(args.momName) : 'her';
-  const tierAmount = args.tier === 1 ? 19 : args.tier === 2 ? 29 : 49;
-  const upgradeLine =
-    args.tier === 1
-      ? `<p style="font-size:14px;color:#9f1239;margin-top:16px;">
-           <strong>P.S.</strong> Want to add photos or a voice memo to a couple days? Bump up to
-           the $29 tier — same flow, way more impact. Or stay at $19. No pressure.
-         </p>`
-      : args.tier === 2
-        ? `<p style="font-size:14px;color:#9f1239;margin-top:16px;">
-             <strong>P.S.</strong> If you want a private webpage just for ${who} — letter, photos,
-             your video, all in one place — that&rsquo;s the $49 tier. You can bump up when you come
-             back. Or stay at $29.
-           </p>`
-        : '';
-
   const inner = `
     <h1 style="font-family:Georgia,serif;font-size:26px;margin:0 0 14px;color:#374151;">
       I&rsquo;m not crying. You&rsquo;re crying.
     </h1>
     <p style="font-size:16px;color:#374151;line-height:1.7;">
       You wrote real things about ${who}. The AI turned them into something good. We saved
-      everything you typed so you can come back whenever &mdash; the toilet, your lunch break,
-      tonight when the kids are asleep.
+      everything you typed so you can come back whenever &mdash; on your phone, your lunch
+      break, tonight when the kids are asleep.
     </p>
     <p style="font-size:16px;color:#374151;margin-top:14px;line-height:1.7;">
       Here&rsquo;s your workspace. It&rsquo;s yours. Open it from any phone or laptop.
@@ -274,13 +378,13 @@ export function saveProgressEmail(args: {
       </a>
     </p>
     <p style="font-size:14px;color:#6b7280;line-height:1.6;">
-      In there you can: read your sample messages, add photos or a voice memo,
-      tweak anything, then pay $${tierAmount} when you&rsquo;re ready. Edits save automatically.
+      In there you can review your messages, add up to 2 photos, tweak anything, and then
+      finish whenever. It&rsquo;s pay-what-you-want, including free. Edits save automatically.
       Come back as many times as you want.
     </p>
-    ${upgradeLine}
     <div class="footer">
       <p>No expiration on this link. We&rsquo;ll be here.<br>— Memphis</p>
+      <p style="margin-top:10px;font-size:12px;color:#9ca3af;">We email YOU. You text ${who}. We never message her directly.</p>
     </div>`;
   return {
     subject: `Your Mother's Day workspace — pick up where you left off`,

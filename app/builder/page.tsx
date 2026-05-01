@@ -1,601 +1,515 @@
 'use client';
 
-import { useEffect, useMemo, useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { StepBreadcrumb, NextLine } from '../_components/StepBreadcrumb';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { StepBreadcrumb } from '../_components/StepBreadcrumb';
+import VoiceInput from '../_components/VoiceInput';
+import TipJar from '../_components/TipJar';
 
-type Tier = 1 | 2 | 3;
+type Step = 'language' | 'names' | 'q1' | 'q2' | 'q3' | 'q4';
 
-const QUESTIONS = [
+const STORAGE_KEY = 'mdmvp_builder_v3';
+
+const QUESTIONS: Array<{
+  key: 'question_1' | 'question_2' | 'question_3' | 'question_4';
+  step: Step;
+  ordinal: string;
+  title: string;
+  text: string;
+  placeholder: string;
+}> = [
   {
     key: 'question_1',
-    text: "What's one thing your mom always does for you?",
-    placeholder: "Example: Makes soup when I'm sick, calls every Sunday...",
-    examples: [
-      "Texts me 'Good morning sunshine' every day",
-      'Saves articles about my work and emails them',
-      'Makes my favorite meal when I visit',
-    ],
-    tip: 'Think about PATTERNS, not one-time events. What does she do repeatedly?',
+    step: 'q1',
+    ordinal: '1 of 4',
+    title: 'The memory',
+    text: "What's a specific moment with your mom you'll never forget?",
+    placeholder: "Example: That time we drove three hours just to find that one bakery and got lost twice...",
   },
   {
     key: 'question_2',
-    text: "What's a memory you two share that makes her laugh?",
-    placeholder: 'Example: The time I tried to cook and...',
-    examples: [
-      'When I tried to parallel park and hit the cone 6 times',
-      'The family trip where I got scared on Space Mountain',
-      'When I called her panicking about shrinking my clothes',
-    ],
-    tip: 'Pick a specific story with details. She should remember it immediately.',
+    step: 'q2',
+    ordinal: '2 of 4',
+    title: 'The thing she does',
+    text: "What's something your mom does that nobody else does?",
+    placeholder: 'Example: Sends me a sunrise photo every Sunday with no caption...',
   },
   {
     key: 'question_3',
-    text: "What's something she taught you that you still use?",
-    placeholder: 'Example: How to fold a fitted sheet...',
-    examples: [
-      'To always keep a granola bar in my bag',
-      'How to write thank-you notes within 24 hours',
-      "That 'if you're going to do something, do it right'",
-    ],
-    tip: 'Pick ONE thing. Do you actually still do this?',
+    step: 'q3',
+    ordinal: '3 of 4',
+    title: 'The thing you haven’t said',
+    text: "What's something you've never told your mom but she should know?",
+    placeholder: 'Example: That I notice every small thing she does, even when I act like I don’t...',
   },
   {
     key: 'question_4',
-    text: "What would you say to her if you weren't awkward about feelings?",
-    placeholder: 'Example: I notice everything you do...',
-    examples: [
-      "I notice everything you do even when I don't say it",
-      "I'm sorry I don't call more. It's not that I don't want to",
-      'You taught me how to be a good person just by watching you',
-    ],
-    tip: "The truth you don't say out loud. If it makes you uncomfortable, that's the one.",
+    step: 'q4',
+    ordinal: '4 of 4',
+    title: 'The future',
+    text: "What's something you're looking forward to doing with your mom?",
+    placeholder: 'Example: Taking her on the road trip we always talk about but never plan...',
   },
-] as const;
+];
 
-type Step = 'q1' | 'q2' | 'q3' | 'q4' | 'contact' | 'media-yn' | 'media-days';
+const LANGUAGES = [
+  'English',
+  'Spanish',
+  'French',
+  'Mandarin Chinese',
+  'Korean',
+  'Vietnamese',
+  'Tagalog',
+  'Arabic',
+  'Portuguese',
+  'Hindi',
+  'Japanese',
+  'German',
+  'Italian',
+  'Russian',
+  'Other',
+];
 
-const DAY_LABELS: Record<number, string> = {
-  1: 'Day 1 — May 4th — what she does for you',
-  2: 'Day 2 — May 5th — funny memory',
-  3: 'Day 3 — May 6th — what she taught you',
-  4: 'Day 4 — May 7th — extra detail',
-  5: 'Day 5 — May 8th — emotional weight',
-  6: 'Day 6 — May 9th — anticipation',
-  7: 'Day 7 — May 10th — Mother’s Day finale',
-};
+const MIN_CHARS = 20;
 
-function BuilderInner() {
+type Answers = { question_1: string; question_2: string; question_3: string; question_4: string };
+
+export default function BuilderPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const tier = clampTier(Number(searchParams.get('tier') || '1'));
-
-  const [step, setStep] = useState<Step>('q1');
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [contact, setContact] = useState({
-    user_name: '',
-    user_email: '',
-    mom_name: '',
-    mom_email: '',
-    delivery_time: '08:00',
-    delivery_timezone: 'America/Chicago',
+  const [hydrated, setHydrated] = useState(false);
+  const [step, setStep] = useState<Step>('language');
+  const [language, setLanguage] = useState<string>('English');
+  const [otherLanguage, setOtherLanguage] = useState<string>('');
+  const [momNickname, setMomNickname] = useState<string>('');
+  const [momName, setMomName] = useState<string>('');
+  const [answers, setAnswers] = useState<Answers>({
+    question_1: '',
+    question_2: '',
+    question_3: '',
+    question_4: '',
   });
-  const [extraReminders, setExtraReminders] = useState(false);
-  const [wantsMedia, setWantsMedia] = useState<boolean | null>(null);
-  const [mediaDays, setMediaDays] = useState<Set<number>>(new Set());
 
-  const [restored, setRestored] = useState(false);
-
-  // Restore prior progress on mount.
+  // Restore from localStorage on mount.
   useEffect(() => {
     try {
-      const tz =
-        Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Chicago';
-      setContact((c) => ({ ...c, delivery_timezone: tz }));
-    } catch {}
-    try {
-      const raw = localStorage.getItem('builderData');
+      const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const saved = JSON.parse(raw);
-        if (saved && saved.tier === tier) {
-          setAnswers(saved.answers || {});
-          setContact((c) => ({ ...c, ...(saved.contact || {}) }));
-          setExtraReminders(!!saved.extraReminders);
-          setWantsMedia(typeof saved.wantsMedia === 'boolean' ? saved.wantsMedia : null);
-          setMediaDays(new Set(saved.mediaDays || []));
-          if (typeof saved.step === 'string') setStep(saved.step as Step);
-        }
+        const parsed = JSON.parse(raw);
+        if (parsed.step) setStep(parsed.step);
+        if (typeof parsed.language === 'string') setLanguage(parsed.language);
+        if (typeof parsed.otherLanguage === 'string') setOtherLanguage(parsed.otherLanguage);
+        if (typeof parsed.momNickname === 'string') setMomNickname(parsed.momNickname);
+        if (typeof parsed.momName === 'string') setMomName(parsed.momName);
+        if (parsed.answers) setAnswers((a) => ({ ...a, ...parsed.answers }));
       }
     } catch {}
-    setRestored(true);
-  }, [tier]);
+    setHydrated(true);
+  }, []);
 
-  // Auto-save every keystroke. Lets users close the tab and come back.
+  // Save on every change after hydration.
   useEffect(() => {
-    if (!restored) return;
+    if (!hydrated) return;
     try {
       localStorage.setItem(
-        'builderData',
+        STORAGE_KEY,
+        JSON.stringify({ step, language, otherLanguage, momNickname, momName, answers }),
+      );
+    } catch {}
+  }, [hydrated, step, language, otherLanguage, momNickname, momName, answers]);
+
+  const effectiveLanguage = useMemo(
+    () => (language === 'Other' && otherLanguage.trim() ? otherLanguage.trim() : language),
+    [language, otherLanguage],
+  );
+
+  const stepIndex = useMemo(() => {
+    const order: Step[] = ['language', 'names', 'q1', 'q2', 'q3', 'q4'];
+    return order.indexOf(step);
+  }, [step]);
+  const progress = ((stepIndex + 1) / 6) * 100;
+
+  function go(next: Step) {
+    setStep(next);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function finish() {
+    // Persist all answers in the format the preview page expects.
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ step: 'q4', language, otherLanguage, momNickname, momName, answers }),
+      );
+      // Drop a separate flag preview can read for "ready to generate".
+      localStorage.setItem(
+        'mdmvp_builder_complete_v3',
         JSON.stringify({
-          tier,
+          language: effectiveLanguage,
+          momNickname,
+          momName,
           answers,
-          contact,
-          extraReminders,
-          wantsMedia,
-          mediaDays: Array.from(mediaDays).sort(),
-          step,
+          completedAt: Date.now(),
         }),
       );
     } catch {}
-  }, [restored, tier, answers, contact, extraReminders, wantsMedia, mediaDays, step]);
-
-  const currentQuestion = useMemo(() => {
-    if (step === 'q1') return QUESTIONS[0];
-    if (step === 'q2') return QUESTIONS[1];
-    if (step === 'q3') return QUESTIONS[2];
-    if (step === 'q4') return QUESTIONS[3];
-    return null;
-  }, [step]);
-
-  const stepIndex = stepToIndex(step, tier);
-  const totalSteps = totalStepsForTier(tier);
-
-  const STEP_ORDER: Step[] = ['q1', 'q2', 'q3', 'q4', 'contact', 'media-yn', 'media-days'];
-
-  function next() {
-    if (currentQuestion) {
-      const order: Step[] = ['q1', 'q2', 'q3', 'q4', 'contact'];
-      setStep(order[order.indexOf(step) + 1] as Step);
-      return;
-    }
-    if (step === 'contact') {
-      if (tier === 1) {
-        finish(false, []);
-        return;
-      }
-      setStep('media-yn');
-      return;
-    }
-    if (step === 'media-yn') {
-      if (wantsMedia) setStep('media-days');
-      else finish(false, []);
-      return;
-    }
-    if (step === 'media-days') {
-      finish(true, Array.from(mediaDays).sort());
-      return;
-    }
-  }
-
-  function back() {
-    const idx = STEP_ORDER.indexOf(step);
-    if (idx > 0) setStep(STEP_ORDER[idx - 1]);
-  }
-  const canGoBack = step !== 'q1';
-
-  function finish(addMedia: boolean, days: number[]) {
-    const payload = {
-      tier,
-      answers,
-      contact,
-      extraReminders,
-      wantsMedia: addMedia,
-      mediaDays: days,
-      step,
-    };
-    localStorage.setItem('builderData', JSON.stringify(payload));
     router.push('/preview');
   }
 
-  const canAdvance = (() => {
-    if (currentQuestion) {
-      const v = answers[currentQuestion.key] || '';
-      return v.trim().length >= 20;
-    }
-    if (step === 'contact') {
-      return (
-        isEmail(contact.user_email) &&
-        /^\d{2}:\d{2}$/.test(contact.delivery_time)
-      );
-    }
-    if (step === 'media-yn') return wantsMedia !== null;
-    if (step === 'media-days') return mediaDays.size > 0;
-    return false;
-  })();
-
-  const stepCopy = describeStep(step, tier, wantsMedia);
+  if (!hydrated) {
+    return (
+      <main id="main" className="min-h-screen bg-white">
+        <div className="max-w-2xl mx-auto p-6 py-12">
+          <p className="text-gray-700">Loading…</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex items-start md:items-center justify-center p-4 bg-gray-50">
-      <div className="max-w-2xl w-full py-8">
-        <StepBreadcrumb
-          done={stepCopy.done}
-          current={stepCopy.current}
-          progress={Math.round(((stepIndex + 1) / totalSteps) * 100)}
-          next={stepCopy.next}
-        />
-
-        {currentQuestion ? (
-          <QuestionScreen
-            q={currentQuestion}
-            value={answers[currentQuestion.key] || ''}
-            onChange={(v) => setAnswers({ ...answers, [currentQuestion.key]: v })}
+    <>
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-white focus:px-4 focus:py-2 focus:rounded-lg focus:outline-2 focus:outline-rose-500"
+      >
+        Skip to content
+      </a>
+      <main id="main" className="min-h-screen bg-white">
+        <div className="max-w-2xl mx-auto px-6 py-12 md:py-16">
+          <StepBreadcrumb
+            done={stepIndex > 0 ? `Step ${stepIndex} of 6 done` : undefined}
+            current={
+              step === 'language'
+                ? 'Pick a language'
+                : step === 'names'
+                  ? 'About mom'
+                  : `Question ${QUESTIONS.find((q) => q.step === step)?.ordinal}`
+            }
+            progress={progress}
+            next={
+              step === 'language'
+                ? 'About mom'
+                : step === 'names'
+                  ? 'Question 1 of 4'
+                  : step === 'q4'
+                    ? 'Preview your messages'
+                    : `Question ${stepIndex} of 4`
+            }
           />
-        ) : null}
-
-        {step === 'contact' ? (
-          <ContactScreen
-            contact={contact}
-            setContact={setContact}
-            extraReminders={extraReminders}
-            setExtraReminders={setExtraReminders}
-          />
-        ) : null}
-
-        {step === 'media-yn' ? (
-          <MediaYNScreen wantsMedia={wantsMedia} setWantsMedia={setWantsMedia} />
-        ) : null}
-
-        {step === 'media-days' ? (
-          <MediaDaysScreen mediaDays={mediaDays} setMediaDays={setMediaDays} />
-        ) : null}
-
-        <div className="mt-8 flex gap-3">
-          {canGoBack ? (
-            <button
-              onClick={back}
-              className="px-5 py-4 bg-white border-2 border-gray-300 text-gray-900 rounded-lg text-base font-semibold hover:bg-gray-50 transition"
-            >
-              ← Back
-            </button>
-          ) : null}
-          <button
-            onClick={next}
-            disabled={!canAdvance}
-            className="flex-1 bg-blue-600 text-white py-4 rounded-lg text-lg font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-700 transition"
+          <div
+            role="progressbar"
+            aria-valuenow={stepIndex + 1}
+            aria-valuemin={1}
+            aria-valuemax={6}
+            aria-label={`Step ${stepIndex + 1} of 6`}
+            className="sr-only"
           >
-            {stepCopy.button}
-          </button>
-        </div>
+            Step {stepIndex + 1} of 6
+          </div>
 
-        <NextLine text={stepCopy.next} />
-      </div>
-    </div>
+          {step === 'language' ? (
+            <LanguageStep
+              language={language}
+              otherLanguage={otherLanguage}
+              setLanguage={setLanguage}
+              setOtherLanguage={setOtherLanguage}
+              effectiveLanguage={effectiveLanguage}
+              onNext={() => go('names')}
+            />
+          ) : step === 'names' ? (
+            <NamesStep
+              momNickname={momNickname}
+              momName={momName}
+              setMomNickname={setMomNickname}
+              setMomName={setMomName}
+              onBack={() => go('language')}
+              onNext={() => go('q1')}
+            />
+          ) : (
+            <QuestionStep
+              key={step}
+              spec={QUESTIONS.find((q) => q.step === step)!}
+              value={answers[QUESTIONS.find((q) => q.step === step)!.key]}
+              setValue={(v) =>
+                setAnswers((a) => ({
+                  ...a,
+                  [QUESTIONS.find((q) => q.step === step)!.key]: v,
+                }))
+              }
+              language={effectiveLanguage}
+              onBack={() => {
+                const order: Step[] = ['language', 'names', 'q1', 'q2', 'q3', 'q4'];
+                const i = order.indexOf(step);
+                go(order[i - 1] || 'language');
+              }}
+              onNext={() => {
+                if (step === 'q4') finish();
+                else {
+                  const order: Step[] = ['q1', 'q2', 'q3', 'q4'];
+                  const i = order.indexOf(step);
+                  go(order[i + 1]);
+                }
+              }}
+              isLast={step === 'q4'}
+            />
+          )}
+
+          <p className="mt-8 text-xs text-gray-700 text-center">
+            Take your time. Your answer saves automatically.
+          </p>
+
+          {/* Tip jar — whisper, share-only on builder (no contribute pre-product) */}
+          <TipJar variant="whisper" showContribute={false} />
+        </div>
+      </main>
+    </>
   );
 }
 
-function describeStep(
-  step: Step,
-  tier: Tier,
-  wantsMedia: boolean | null,
-): { done?: string; current: string; next: string; button: string } {
-  if (step === 'q1') {
-    return {
-      current: 'Question 1 of 5 — what she always does for you',
-      next: '4 more questions about your mom',
-      button: 'Answer Question 2 →',
-    };
-  }
-  if (step === 'q2') {
-    return {
-      done: 'Answered Question 1',
-      current: 'Question 2 of 5 — a funny memory',
-      next: '3 more questions',
-      button: 'Answer Question 3 →',
-    };
-  }
-  if (step === 'q3') {
-    return {
-      done: 'Answered Question 2',
-      current: 'Question 3 of 5 — what she taught you',
-      next: '2 more questions',
-      button: 'Answer Question 4 →',
-    };
-  }
-  if (step === 'q4') {
-    return {
-      done: 'Answered Question 3',
-      current: 'Question 4 of 5 — what you’d say if not awkward',
-      next: 'where to send the morning email',
-      button: 'Where to send these →',
-    };
-  }
-  if (step === 'contact') {
-    if (tier === 1) {
-      return {
-        done: 'Answered all 4 questions about her',
-        current: 'Step 5 of 5 — where to send the morning email',
-        next: 'see your 7 messages',
-        button: 'See My Messages →',
-      };
-    }
-    return {
-      done: 'Answered all 4 questions about her',
-      current: 'Step 5 of 7 — where to send the morning email',
-      next: 'pick if you want photos / video / audio',
-      button: 'Pick Media Options →',
-    };
-  }
-  if (step === 'media-yn') {
-    return {
-      done: 'Saved your details',
-      current: 'Step 6 of 7 — media or skip',
-      next: wantsMedia ? 'pick which days get media' : 'see your 7 messages',
-      button: wantsMedia === true
-        ? 'Pick Which Days →'
-        : wantsMedia === false
-          ? 'See My Messages →'
-          : 'Pick One →',
-    };
-  }
-  if (step === 'media-days') {
-    return {
-      done: 'Picked yes on media',
-      current: 'Step 7 of 7 — which days get media',
-      next: 'see your 7 messages',
-      button: 'See My Messages →',
-    };
-  }
-  return { current: '', next: '', button: 'Continue →' };
-}
-
-function QuestionScreen(props: {
-  q: (typeof QUESTIONS)[number];
-  value: string;
-  onChange: (v: string) => void;
+function LanguageStep({
+  language,
+  otherLanguage,
+  setLanguage,
+  setOtherLanguage,
+  effectiveLanguage,
+  onNext,
+}: {
+  language: string;
+  otherLanguage: string;
+  setLanguage: (s: string) => void;
+  setOtherLanguage: (s: string) => void;
+  effectiveLanguage: string;
+  onNext: () => void;
 }) {
-  const len = props.value.trim().length;
-  const enough = len >= 20;
-  const isFirst = props.q.key === 'question_1';
+  const ready = language !== 'Other' || otherLanguage.trim().length > 0;
   return (
-    <>
-      {isFirst ? (
-        <div className="bg-rose-50 border border-rose-200 rounded-lg p-3 mb-5 text-xs text-rose-900">
-          <strong>Quick reminder:</strong> we send messages to YOUR email. You forward them to mom.
-          You&rsquo;ll see each one before it goes out.
+    <section aria-labelledby="lang-h">
+      <h1 id="lang-h" className="font-serif text-3xl md:text-4xl text-gray-950 mb-3">
+        What language does your mom prefer?
+      </h1>
+      <p id="lang-help" className="text-gray-700 mb-8 text-lg">
+        We&rsquo;ll write the messages in her language. Pick whatever feels most like home.
+      </p>
+      <label htmlFor="language-select" className="block text-sm font-medium text-gray-700 mb-2">
+        Language
+      </label>
+      <select
+        id="language-select"
+        aria-describedby="lang-help"
+        value={language}
+        onChange={(e) => setLanguage(e.target.value)}
+        className="w-full border border-gray-200 rounded-xl p-3 text-base bg-white focus:border-rose-600 focus:ring-1 focus:ring-rose-600 focus:outline-none"
+      >
+        {LANGUAGES.map((l) => (
+          <option key={l} value={l}>
+            {l}
+          </option>
+        ))}
+      </select>
+      {language === 'Other' ? (
+        <div className="mt-4">
+          <label htmlFor="language-other" className="block text-sm font-medium text-gray-700 mb-2">
+            Type the language
+          </label>
+          <input
+            id="language-other"
+            type="text"
+            value={otherLanguage}
+            onChange={(e) => setOtherLanguage(e.target.value)}
+            placeholder="e.g. Polish, Swahili, Tamil"
+            className="w-full border border-gray-200 rounded-xl p-3 text-base bg-white focus:border-rose-600 focus:ring-1 focus:ring-rose-600 focus:outline-none"
+          />
         </div>
       ) : null}
-      <h2 className="text-2xl md:text-3xl font-bold mb-2">{props.q.text}</h2>
-      <p className="text-sm text-gray-800 mb-4">
-        At least 20 characters — this helps AI write better messages.
-      </p>
-      <textarea
-        value={props.value}
-        onChange={(e) => props.onChange(e.target.value)}
-        className="w-full p-4 border-2 border-gray-300 rounded-lg text-base min-h-32 focus:border-blue-600 focus:outline-none mb-2 bg-white"
-        placeholder={props.q.placeholder}
-      />
-      <div className="flex justify-between items-center mb-4 text-sm">
-        <span className={enough ? 'text-green-700' : 'text-gray-800'}>
-          {enough ? '✓ Looks good' : 'Keep typing…'}
-        </span>
-        <span className={`tabular-nums ${enough ? 'text-green-700' : 'text-gray-800'}`}>
-          {len}/20 minimum
-        </span>
-      </div>
-      <p className="text-xs text-gray-800 italic mb-4">
-        Take your time. Your answer saves automatically.
-      </p>
-      <div className="bg-white border rounded-lg p-4 mb-2">
-        <p className="text-sm font-semibold text-gray-700 mb-2">💡 {props.q.tip}</p>
-        {props.q.examples.length ? (
-          <>
-            <p className="text-sm text-gray-600 mb-1">Examples:</p>
-            <ul className="space-y-1">
-              {props.q.examples.map((ex, i) => (
-                <li key={i} className="text-sm text-gray-700">• {ex}</li>
-              ))}
-            </ul>
-          </>
-        ) : null}
-      </div>
-    </>
-  );
-}
-
-function ContactScreen(props: {
-  contact: {
-    user_name: string;
-    user_email: string;
-    mom_name: string;
-    mom_email: string;
-    delivery_time: string;
-    delivery_timezone: string;
-  };
-  setContact: React.Dispatch<React.SetStateAction<typeof props.contact>>;
-  extraReminders: boolean;
-  setExtraReminders: (v: boolean) => void;
-}) {
-  const { contact, setContact, extraReminders, setExtraReminders } = props;
-  return (
-    <>
-      <h2 className="text-2xl md:text-3xl font-bold mb-2">Where do we send the morning email?</h2>
-      <p className="text-gray-600 mb-6">
-        We email <strong>you</strong> the message every morning at the time you pick. You copy/paste
-        and text it to mom from your phone. Takes 30 seconds.
-      </p>
-      <div className="space-y-4">
-        <Field label="Your email (we send the daily message here)">
-          <input
-            type="email"
-            value={contact.user_email}
-            onChange={(e) => setContact({ ...contact, user_email: e.target.value })}
-            placeholder="you@example.com"
-            className="w-full p-3 border-2 border-gray-300 rounded-lg bg-white"
-          />
-        </Field>
-        <Field label="Your name (optional — used in the messages)">
-          <input
-            value={contact.user_name}
-            onChange={(e) => setContact({ ...contact, user_name: e.target.value })}
-            placeholder="Memphis"
-            className="w-full p-3 border-2 border-gray-300 rounded-lg bg-white"
-          />
-        </Field>
-        <Field label="Her name (optional — used in the email subject)">
-          <input
-            value={contact.mom_name}
-            onChange={(e) => setContact({ ...contact, mom_name: e.target.value })}
-            placeholder="Mom"
-            className="w-full p-3 border-2 border-gray-300 rounded-lg bg-white"
-          />
-        </Field>
-        <Field label="What time should you get the morning email?">
-          <input
-            type="time"
-            value={contact.delivery_time}
-            onChange={(e) => setContact({ ...contact, delivery_time: e.target.value })}
-            className="w-full p-3 border-2 border-gray-300 rounded-lg bg-white"
-          />
-          <div className="mt-2 bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700">
-            <p>
-              Sent at <strong>{contact.delivery_time || '08:00'}</strong> in <strong>{contact.delivery_timezone}</strong>.
-            </p>
-            <p className="text-gray-800 mt-1 italic">
-              We auto-detected your timezone from your browser. If that&rsquo;s wrong, the time shown
-              above will be off — message us and we&rsquo;ll fix it.
-            </p>
-          </div>
-        </Field>
-        <hr className="my-2" />
-        <label className="flex items-start gap-3 p-4 rounded-lg border-2 border-green-200 bg-green-50/50 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={extraReminders}
-            onChange={(e) => setExtraReminders(e.target.checked)}
-            className="mt-1"
-          />
-          <div>
-            <div className="font-semibold text-sm">Add a gentle 1pm nudge</div>
-            <div className="text-xs text-gray-600 mt-1">
-              For ADHD / neurodivergent folks: a soft afternoon reminder with the message again — no
-              shame if you missed the morning. Calm tone, no pressure. Free.
-            </div>
-          </div>
-        </label>
-      </div>
-    </>
-  );
-}
-
-function MediaYNScreen(props: {
-  wantsMedia: boolean | null;
-  setWantsMedia: (v: boolean) => void;
-}) {
-  return (
-    <>
-      <h2 className="text-2xl md:text-3xl font-bold mb-3">
-        Want to make 2–3 days extra special?
-      </h2>
-      <p className="text-gray-600 mb-6">
-        Photos, video, or audio on the days you pick. Don&rsquo;t put media on every day — it&rsquo;ll
-        feel like work for you and look the same to her.
-      </p>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <button
-          onClick={() => props.setWantsMedia(true)}
-          className={`p-5 rounded-lg border-2 text-left transition ${
-            props.wantsMedia === true ? 'border-blue-600 bg-blue-50' : 'border-gray-300 bg-white'
-          }`}
-        >
-          <div className="font-bold mb-1">Yes, add media</div>
-          <div className="text-sm text-gray-600">I&rsquo;ll pick which days</div>
-        </button>
-        <button
-          onClick={() => props.setWantsMedia(false)}
-          className={`p-5 rounded-lg border-2 text-left transition ${
-            props.wantsMedia === false ? 'border-blue-600 bg-blue-50' : 'border-gray-300 bg-white'
-          }`}
-        >
-          <div className="font-bold mb-1">Skip — messages only</div>
-          <div className="text-sm text-gray-600">She&rsquo;ll never know</div>
-        </button>
-      </div>
-    </>
-  );
-}
-
-function MediaDaysScreen(props: {
-  mediaDays: Set<number>;
-  setMediaDays: (v: Set<number>) => void;
-}) {
-  function toggle(n: number) {
-    const next = new Set(props.mediaDays);
-    if (next.has(n)) next.delete(n);
-    else next.add(n);
-    props.setMediaDays(next);
-  }
-  return (
-    <>
-      <h2 className="text-2xl md:text-3xl font-bold mb-2">Which days?</h2>
-      <p className="text-gray-600 mb-6">
-        Pick 2–3. You&rsquo;ll upload the photos/videos/audio after generating the messages.
-      </p>
-      <div className="space-y-2">
-        {[1, 2, 3, 4, 5, 6, 7].map((n) => (
-          <label
-            key={n}
-            className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition ${
-              props.mediaDays.has(n) ? 'border-blue-600 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
-            }`}
-          >
-            <input
-              type="checkbox"
-              checked={props.mediaDays.has(n)}
-              onChange={() => toggle(n)}
-              className="mr-3"
-            />
-            <span className="text-sm">{DAY_LABELS[n]}</span>
-          </label>
-        ))}
-      </div>
-      {props.mediaDays.size > 4 ? (
-        <p className="text-sm text-amber-700 mt-3">
-          That&rsquo;s a lot of media. 2–3 days hits harder than 5+ — but your call.
+      {effectiveLanguage && effectiveLanguage !== 'English' ? (
+        <p className="mt-4 text-sm text-rose-600">
+          Messages will be written in {effectiveLanguage}.
         </p>
       ) : null}
-    </>
+      <div className="mt-10">
+        <button
+          type="button"
+          disabled={!ready}
+          onClick={onNext}
+          className="w-full min-h-[56px] bg-rose-600 text-white px-8 py-4 rounded-full text-base md:text-lg font-medium shadow-lg hover:shadow-xl hover:bg-rose-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg focus:outline-2 focus:outline-rose-500 focus:outline-offset-2"
+        >
+          Start the questions →
+        </button>
+      </div>
+    </section>
   );
 }
 
-function Field(props: { label: string; children: React.ReactNode }) {
+function NamesStep({
+  momNickname,
+  momName,
+  setMomNickname,
+  setMomName,
+  onBack,
+  onNext,
+}: {
+  momNickname: string;
+  momName: string;
+  setMomNickname: (s: string) => void;
+  setMomName: (s: string) => void;
+  onBack: () => void;
+  onNext: () => void;
+}) {
+  const ready = momNickname.trim().length > 0;
   return (
-    <div>
-      <label className="block text-sm font-semibold mb-1">{props.label}</label>
-      {props.children}
-    </div>
+    <section aria-labelledby="names-h">
+      <h1 id="names-h" className="font-serif text-2xl md:text-3xl text-gray-950 mb-3">
+        About mom
+      </h1>
+      <p className="text-gray-700 mb-8 text-lg">
+        Two quick things so the messages sound like they came from you.
+      </p>
+
+      <label htmlFor="mom-nickname" className="block text-sm font-medium text-gray-700 mb-2">
+        What do you call her?
+      </label>
+      <input
+        id="mom-nickname"
+        type="text"
+        value={momNickname}
+        onChange={(e) => setMomNickname(e.target.value)}
+        placeholder="Mom, Mama, Mami, Ma, Mother..."
+        className="w-full border border-gray-200 rounded-xl p-3 text-base bg-white focus:border-rose-600 focus:ring-1 focus:ring-rose-600 focus:outline-none"
+      />
+      <p className="mt-2 text-xs text-gray-700">
+        Goes in the messages: &ldquo;Hey {momNickname.trim() || 'Mama'}, I&rsquo;ve been thinking about…&rdquo;
+      </p>
+
+      <label htmlFor="mom-firstname" className="mt-6 block text-sm font-medium text-gray-700 mb-2">
+        What&rsquo;s her first name? <span className="text-gray-700 font-normal">(optional)</span>
+      </label>
+      <input
+        id="mom-firstname"
+        type="text"
+        value={momName}
+        onChange={(e) => setMomName(e.target.value)}
+        placeholder="For the forever page headline"
+        className="w-full border border-gray-200 rounded-xl p-3 text-base bg-white focus:border-rose-600 focus:ring-1 focus:ring-rose-600 focus:outline-none"
+      />
+      <p className="mt-2 text-xs text-gray-700">
+        Goes on her page: &ldquo;Happy Mother&rsquo;s Day, {momName.trim() || momNickname.trim() || 'Mom'}.&rdquo;
+      </p>
+
+      <div className="mt-10 flex flex-col-reverse sm:flex-row gap-3">
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex-1 min-h-[56px] border border-gray-200 text-gray-700 px-6 py-3 rounded-full font-medium hover:border-gray-400 transition-colors focus:outline-2 focus:outline-rose-500 focus:outline-offset-2"
+        >
+          ← Back
+        </button>
+        <button
+          type="button"
+          disabled={!ready}
+          onClick={onNext}
+          className="flex-1 min-h-[56px] bg-rose-600 text-white px-8 py-4 rounded-full text-base md:text-lg font-medium shadow-lg hover:shadow-xl hover:bg-rose-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg focus:outline-2 focus:outline-rose-500 focus:outline-offset-2"
+        >
+          Start the questions →
+        </button>
+      </div>
+    </section>
   );
 }
 
-function isEmail(s: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
-}
-
-function clampTier(n: number): Tier {
-  if (n === 2) return 2;
-  if (n === 3) return 3;
-  return 1;
-}
-
-function tierPrice(t: Tier) {
-  return t === 1 ? 19 : t === 2 ? 29 : 39;
-}
-
-function stepToIndex(step: Step, tier: Tier) {
-  const order: Step[] = ['q1', 'q2', 'q3', 'q4', 'contact', 'media-yn', 'media-days'];
-  const idx = order.indexOf(step);
-  if (tier === 1) return Math.min(idx, 4);
-  return idx;
-}
-
-function totalStepsForTier(tier: Tier) {
-  return tier === 1 ? 5 : 7;
-}
-
-export default function Builder() {
+function QuestionStep({
+  spec,
+  value,
+  setValue,
+  language,
+  onBack,
+  onNext,
+  isLast,
+}: {
+  spec: { key: string; ordinal: string; title: string; text: string; placeholder: string };
+  value: string;
+  setValue: (v: string) => void;
+  language: string;
+  onBack: () => void;
+  onNext: () => void;
+  isLast: boolean;
+}) {
+  const trimmed = value.trim();
+  const ready = trimmed.length >= MIN_CHARS;
+  const counterText = ready ? `✓ ${trimmed.length}/${MIN_CHARS} minimum` : `${trimmed.length}/${MIN_CHARS} minimum`;
+  const isFirst = spec.ordinal === '1 of 4';
   return (
-    <Suspense fallback={<div className="p-8">Loading…</div>}>
-      <BuilderInner />
-    </Suspense>
+    <section aria-labelledby={`${spec.key}-h`}>
+      <p className="text-xs uppercase tracking-[0.2em] text-gray-700 mb-3">
+        Question {spec.ordinal} · {spec.title}
+      </p>
+      <h1 id={`${spec.key}-h`} className="font-serif text-2xl md:text-3xl text-gray-950 mb-3">
+        {spec.text}
+      </h1>
+      <p className="text-gray-700 mb-6">
+        Specific is better than poetic. Quote actual moments. Mom will know it&rsquo;s real.
+      </p>
+      {isFirst ? (
+        <div className="bg-gray-50 rounded-2xl p-5 mb-6 text-base text-gray-800 leading-relaxed">
+          <p className="font-medium text-gray-950 mb-3">Answer however works for you.</p>
+          <ul className="space-y-2">
+            <li>
+              <span aria-hidden="true">🎤 </span>
+              <span className="font-medium text-gray-950">Talk</span> — tap the mic and just say it
+            </li>
+            <li>
+              <span aria-hidden="true">⌨️ </span>
+              <span className="font-medium text-gray-950">Type</span> — write it out
+            </li>
+            <li>
+              <span aria-hidden="true">🤏 </span>
+              <span className="font-medium text-gray-950">Short is fine</span> — even a few words work
+            </li>
+          </ul>
+          <p className="mt-3 italic text-gray-700">There&rsquo;s no wrong way to do this.</p>
+        </div>
+      ) : null}
+      <label htmlFor={spec.key} className="sr-only">
+        {spec.text}
+      </label>
+      <div className="relative">
+        <textarea
+          id={spec.key}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={spec.placeholder}
+          rows={6}
+          className="w-full border border-gray-200 rounded-xl p-4 pr-16 text-base leading-relaxed bg-white focus:border-rose-600 focus:ring-1 focus:ring-rose-600 focus:outline-none"
+        />
+        <div className="absolute bottom-3 right-3">
+          <VoiceInput currentValue={value} onTranscript={setValue} language={language} />
+        </div>
+      </div>
+      <p className="mt-2 text-xs text-gray-700">
+        Talk it, type it, whatever works. Even a few words gives us enough.
+      </p>
+      <p
+        aria-live="polite"
+        aria-label={`${trimmed.length} of ${MIN_CHARS} minimum characters`}
+        className={`mt-2 text-sm ${ready ? 'text-rose-600 font-medium' : 'text-gray-700'}`}
+      >
+        {counterText}
+      </p>
+      <div className="mt-10 flex flex-col-reverse sm:flex-row gap-3">
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex-1 min-h-[56px] border border-gray-200 text-gray-700 px-6 py-3 rounded-full font-medium hover:border-gray-400 transition-colors focus:outline-2 focus:outline-rose-500 focus:outline-offset-2"
+        >
+          ← Back
+        </button>
+        <button
+          type="button"
+          disabled={!ready}
+          onClick={onNext}
+          className="flex-1 min-h-[56px] bg-rose-600 text-white px-8 py-4 rounded-full text-base md:text-lg font-medium shadow-lg hover:shadow-xl hover:bg-rose-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg focus:outline-2 focus:outline-rose-500 focus:outline-offset-2"
+        >
+          {isLast ? 'See my messages →' : `Answer ${spec.ordinal === '4 of 4' ? 'last question' : 'next question'} →`}
+        </button>
+      </div>
+    </section>
   );
 }

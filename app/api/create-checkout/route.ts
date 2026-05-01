@@ -1,19 +1,26 @@
 import { NextResponse } from 'next/server';
-import { createCheckoutSession, type Tier } from '@/lib/stripe';
+import { createCheckoutSession } from '@/lib/stripe';
 import { supabaseAdmin } from '@/lib/supabase';
+import { sendEmail } from '@/lib/resend';
+import { confirmationEmail } from '@/lib/email-templates';
+import { deliveryISOForDay, formatHumanDate, formatTime12 } from '@/lib/dates';
+import { signEditToken } from '@/lib/auth';
+import { scheduleDailyEmails } from '@/lib/email-scheduler';
+
+export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const tier = clampTier(body.tier);
+    const amount = typeof body.amount === 'number' ? body.amount : Number(body.amount) || 0;
     const contact = body.contact || {};
     const answers = body.answers || {};
     const messages = body.messages;
     const media = Array.isArray(body.media) ? body.media : [];
-    // Tier 3 forever-page extras
     const foreverData = body.forever_data || {};
+    const language =
+      typeof body.language === 'string' && body.language.trim() ? body.language.trim() : 'English';
 
-    // Buyer-relay model: mom_email is optional (buyer texts mom from their phone).
     const requiredContact = ['user_email', 'delivery_time', 'delivery_timezone'];
     for (const k of requiredContact) {
       if (!contact[k]) return NextResponse.json({ error: `missing contact.${k}` }, { status: 400 });
@@ -24,16 +31,13 @@ export async function POST(req: Request) {
     if (contact.mom_email && !isEmail(contact.mom_email)) {
       return NextResponse.json({ error: 'invalid mom_email' }, { status: 400 });
     }
-    // Soft gate: user sees + edits Days 1 and 2 before paying. Days 3-7 are
-    // generated server-side by the Stripe webhook after payment.
     if (!messages || typeof messages !== 'object') {
       return NextResponse.json({ error: 'missing messages' }, { status: 400 });
     }
-    if (typeof messages.day_1 !== 'string' || !messages.day_1.trim()) {
-      return NextResponse.json({ error: 'messages.day_1 missing' }, { status: 400 });
-    }
-    if (typeof messages.day_2 !== 'string' || !messages.day_2.trim()) {
-      return NextResponse.json({ error: 'messages.day_2 missing' }, { status: 400 });
+    for (const k of ['day_1', 'day_2', 'day_3']) {
+      if (typeof messages[k] !== 'string' || !messages[k].trim()) {
+        return NextResponse.json({ error: `messages.${k} missing` }, { status: 400 });
+      }
     }
     const requiredAnswers = ['question_1', 'question_2', 'question_3', 'question_4'];
     for (const k of requiredAnswers) {
@@ -42,31 +46,54 @@ export async function POST(req: Request) {
       }
     }
 
-    const tierAmount = tier === 1 ? 1900 : tier === 2 ? 2900 : 4900;
+    const isFree = amount <= 0;
+    const amountCents = isFree ? 0 : Math.round(amount * 100);
 
-    const { data: orderRow, error: insertError } = await supabaseAdmin
-      .from('orders')
-      .insert({
-        tier,
-        user_email: contact.user_email,
-        user_name: contact.user_name || null,
-        mom_email: contact.mom_email || null,
-        mom_name: contact.mom_name || null,
-        delivery_time: contact.delivery_time,
-        delivery_timezone: contact.delivery_timezone,
-        extra_reminders: !!body.extra_reminders,
-        question_1: answers.question_1 || '',
-        question_2: answers.question_2 || '',
-        question_3: answers.question_3 || '',
-        question_4: answers.question_4 || '',
-        messages,
-        media,
-        forever_data: tier === 3 ? foreverData : {},
-        amount_paid: tierAmount,
-      })
-      .select('id')
-      .single();
+    const baseRow = {
+      tier: 3, // legacy column; everyone gets everything
+      user_email: contact.user_email,
+      user_name: contact.user_name || null,
+      mom_email: contact.mom_email || null,
+      // mom_name = mom's first name (used in forever page headline).
+      mom_name: contact.mom_name || null,
+      delivery_time: contact.delivery_time,
+      delivery_timezone: contact.delivery_timezone,
+      question_1: answers.question_1,
+      question_2: answers.question_2,
+      question_3: answers.question_3,
+      question_4: answers.question_4,
+      messages: { day_1: messages.day_1, day_2: messages.day_2, day_3: messages.day_3 },
+      media,
+      // Stash language + nickname in forever_data — no schema migration needed.
+      // mom_nickname = what the user calls her ("Mama", "Ma", etc.); used in messages.
+      forever_data: {
+        ...foreverData,
+        language,
+        mom_nickname: contact.mom_nickname || undefined,
+      },
+      amount_paid: amountCents,
+      paid: isFree,
+    };
 
+    // Try with the language column first. If the column doesn't exist yet
+    // (Postgres error code 42703), fall back to inserting without it.
+    let orderRow: { id: string } | null = null;
+    let insertError: { message?: string; code?: string } | null = null;
+    {
+      const r = await supabaseAdmin
+        .from('orders')
+        .insert({ ...baseRow, language })
+        .select('id')
+        .single();
+      orderRow = r.data;
+      insertError = r.error;
+    }
+    if (insertError && (insertError.code === '42703' || /column .*language/i.test(insertError.message || ''))) {
+      console.warn('orders.language column missing — retrying insert without it');
+      const r = await supabaseAdmin.from('orders').insert(baseRow).select('id').single();
+      orderRow = r.data;
+      insertError = r.error;
+    }
     if (insertError || !orderRow) {
       console.error('order insert failed', insertError);
       return NextResponse.json(
@@ -75,28 +102,82 @@ export async function POST(req: Request) {
       );
     }
 
-    const session = await createCheckoutSession({
+    if (!isFree) {
+      // Paid path: hand off to Stripe. Webhook will mark paid + schedule emails.
+      const session = await createCheckoutSession({
+        orderId: orderRow.id,
+        amountCents,
+        email: contact.user_email,
+      });
+      await supabaseAdmin
+        .from('orders')
+        .update({ stripe_session_id: session.id })
+        .eq('id', orderRow.id);
+      return NextResponse.json({ url: session.url, orderId: orderRow.id });
+    }
+
+    // Free path: mark paid, schedule emails directly via the shared scheduler
+    // (which threads orderId+emailType through to sendEmail so the gate fires).
+    const orderForScheduler = {
+      id: orderRow.id,
+      user_email: contact.user_email,
+      delivery_time: contact.delivery_time,
+      delivery_timezone: contact.delivery_timezone,
+      mom_name: contact.mom_name || null,
+      messages: { day_1: messages.day_1, day_2: messages.day_2, day_3: messages.day_3 },
+      media,
+    };
+    const { scheduledIds, failures } = await scheduleDailyEmails(orderForScheduler);
+    if (failures.length) {
+      console.warn('free-path schedule failures', { orderId: orderRow.id, failures });
+    }
+
+    // Send confirmation immediately (also gated).
+    const editToken = signEditToken(orderRow.id);
+    const editUrl = `${process.env.NEXT_PUBLIC_URL}/edit/${orderRow.id}#t=${editToken}`;
+    const firstSendISO = deliveryISOForDay(1, contact.delivery_time, contact.delivery_timezone);
+    const firstSendPretty = formatHumanDate(firstSendISO, contact.delivery_timezone);
+    const landingUrl = process.env.NEXT_PUBLIC_URL || '';
+    const contributeUrl = `${landingUrl}/success?orderId=${orderRow.id}#contribute`;
+    const conf = confirmationEmail({
       orderId: orderRow.id,
-      tier,
-      email: contact.user_email,
+      momName: contact.mom_name || undefined,
+      editUrl,
+      firstSendDate: `${firstSendPretty} at ${formatTime12(contact.delivery_time)}`,
+      isFree: true,
+      landingUrl,
+      contributeUrl,
     });
+    const confRes = await sendEmail({
+      to: contact.user_email,
+      subject: conf.subject,
+      html: conf.html,
+      tag: 'confirmation',
+      orderId: orderRow.id,
+      emailType: 'confirmation',
+    });
+    if (confRes.ok) scheduledIds['confirmation'] = confRes.id;
 
     await supabaseAdmin
       .from('orders')
-      .update({ stripe_session_id: session.id })
+      .update({ scheduled_email_ids: scheduledIds })
       .eq('id', orderRow.id);
 
-    return NextResponse.json({ url: session.url, orderId: orderRow.id });
+    // Warm forever page (everyone now). Fire-and-forget.
+    void fetch(`${process.env.NEXT_PUBLIC_URL}/api/warm-forever-page`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ orderId: orderRow.id }),
+    }).catch((e) => {
+      console.warn('warm-forever-page kickoff failed', e);
+    });
+
+    const successUrl = `${process.env.NEXT_PUBLIC_URL}/success?orderId=${orderRow.id}`;
+    return NextResponse.json({ url: successUrl, orderId: orderRow.id });
   } catch (e) {
     console.error('create-checkout error', e);
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
-
-function clampTier(n: unknown): Tier {
-  if (n === 2 || n === '2') return 2;
-  if (n === 3 || n === '3') return 3;
-  return 1;
 }
 
 function isEmail(s: unknown) {

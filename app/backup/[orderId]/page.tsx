@@ -6,12 +6,15 @@
 
 import { notFound } from 'next/navigation';
 import { supabaseAdmin } from '@/lib/supabase';
+import MessageActions from '@/app/_components/MessageActions';
+import TipJar from '@/app/_components/TipJar';
 
 type Params = Promise<{ orderId: string }>;
 
-const DAY_DATES = [
-  'Mon May 4th', 'Tue May 5th', 'Wed May 6th', 'Thu May 7th',
-  'Fri May 8th', 'Sat May 9th', 'Sun May 10th — Mother\'s Day',
+const DAY_LABELS = [
+  'Friday, May 8th — The Memory',
+  'Saturday, May 9th — What She Does',
+  "Sunday, May 10th — Mother's Day",
 ];
 
 type Order = {
@@ -34,53 +37,74 @@ export default async function BackupPage(props: { params: Params }) {
   if (!order.paid) notFound();
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-2xl mx-auto p-6 md:p-10">
-        <h1 className="font-serif text-3xl mb-2 text-gray-900">Backup messages</h1>
-        <p className="text-gray-700 mb-1">
-          Your full set of 7 messages, in case the daily emails get lost or filtered.
-        </p>
-        <p className="text-sm text-gray-800 mb-8">
-          For: {order.mom_name || 'mom'} · Bookmark this URL.
-        </p>
+    <main id="main" className="min-h-screen bg-white">
+      <div className="max-w-2xl mx-auto p-6 py-12 md:py-16">
+        <header className="mb-10">
+          <h1 className="font-serif text-3xl md:text-4xl mb-3 text-gray-950">Backup messages</h1>
+          <p className="text-gray-800 mb-1 leading-relaxed">
+            All 3 messages, in case the daily emails get lost or filtered.
+          </p>
+          <p className="text-sm text-gray-700">
+            For: {order.mom_name || 'mom'} · Bookmark this URL.
+          </p>
+        </header>
 
-        <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 text-sm text-amber-900 mb-8">
-          <strong>How to use:</strong> tap the message text → triple-tap or long-press → Copy. Then
+        <div className="bg-gray-50 rounded-2xl p-5 text-sm text-gray-700 mb-10">
+          <strong className="text-gray-950">How to use:</strong> tap the message text → triple-tap or long-press → Copy. Then
           paste it in a text to mom. Same as the daily emails, just from here.
         </div>
 
-        <div className="space-y-6">
-          {([1, 2, 3, 4, 5, 6, 7] as const).map((day) => {
+        <section className="space-y-8" aria-label="Your three messages">
+          {([1, 2, 3] as const).map((day) => {
             const text = order.messages?.[`day_${day}`];
             return (
-              <div
-                key={day}
-                className="border-l-4 border-rose-300 pl-4 py-2"
-              >
-                <div className="text-xs uppercase tracking-wide text-gray-800 mb-2">
-                  Day {day} of 7 · {DAY_DATES[day - 1]}
+              <article key={day} className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 p-6 md:p-8">
+                <div className="text-xs uppercase tracking-[0.2em] text-gray-700 font-medium mb-3">
+                  {DAY_LABELS[day - 1]}
                 </div>
                 {text ? (
-                  <p className="font-serif text-base leading-relaxed text-gray-800 whitespace-pre-line select-all">
-                    {text}
-                  </p>
+                  <>
+                    <p className="font-serif text-lg leading-relaxed text-gray-950 whitespace-pre-line select-all">
+                      {text}
+                    </p>
+                    <div className="mt-5">
+                      <MessageActions
+                        text={text}
+                        momName={order.mom_name || undefined}
+                        ariaLabelSuffix={`for ${DAY_LABELS[day - 1]}`}
+                        showCopy
+                        showTextMom
+                        showEmailMom
+                      />
+                    </div>
+                  </>
                 ) : (
-                  <p className="text-sm text-gray-800 italic">
-                    Not generated yet — pay first, then refresh.
+                  <p className="text-sm text-gray-700 italic">
+                    Not generated yet — refresh after payment confirms.
                   </p>
                 )}
-              </div>
+              </article>
             );
           })}
-        </div>
+        </section>
 
-        <div className="mt-12 pt-6 border-t text-sm text-gray-800">
-          <p>Order: <code className="bg-gray-100 px-1.5 py-0.5 rounded">{order.id.slice(0, 8)}</code></p>
-          <p className="mt-2">
-            Need to change something? Use <a className="underline" href={`/edit/${order.id}`}>the edit link</a> from your confirmation email.
+        {/* Tip jar — normal */}
+        <TipJar variant="normal" orderId={order.id} />
+
+        <footer className="mt-10 pt-6 border-t border-gray-100 text-sm text-gray-700">
+          <p>
+            Order: <code className="bg-gray-50 px-1.5 py-0.5 rounded text-gray-700">{order.id.slice(0, 8)}</code>
           </p>
-        </div>
+          <p className="mt-2">
+            <a className="text-rose-600 hover:text-rose-700 font-medium" href={`/forever/${order.id}?edit=true`}>
+              View your forever page →
+            </a>
+          </p>
+          <p className="mt-3 text-xs text-gray-600">
+            We email YOU. You text mom. We never message her directly.
+          </p>
+        </footer>
       </div>
-    </div>
+    </main>
   );
 }

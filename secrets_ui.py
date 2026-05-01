@@ -124,6 +124,7 @@ def detect_warning(key: str, value: str) -> str:
     for the common ways people paste the wrong thing into the wrong slot."""
     if not value:
         return ""
+    # Wrong-type-of-key traps
     if key == "SUPABASE_SECRET_KEY" and value.startswith("sb_publishable_"):
         return "wrong key — this is a publishable key. Need sb_secret_… (Supabase → API Keys → reveal Secret)"
     if key == "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" and value.startswith("sb_secret_"):
@@ -136,6 +137,11 @@ def detect_warning(key: str, value: str) -> str:
         return "doesn't look like an Anthropic key (expected sk-ant-…)"
     if key == "RESEND_API_KEY" and not value.startswith("re_"):
         return "doesn't look like a Resend key (expected re_…)"
+    # Test-vs-live mode warnings — flag when going to production
+    if key == "STRIPE_SECRET_KEY" and value.startswith("sk_test_"):
+        return "TEST mode key — swap for sk_live_… in Stripe dashboard (toggle Test mode OFF) to take real payments"
+    if key == "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY" and value.startswith("pk_test_"):
+        return "TEST mode key — swap for pk_live_… in Stripe dashboard to take real payments"
     return ""
 
 

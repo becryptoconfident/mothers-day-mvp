@@ -70,7 +70,7 @@ function Pill({
     green: 'bg-green-50 border-green-200 text-green-900',
     amber: 'bg-amber-50 border-amber-200 text-amber-900',
     red: 'bg-red-50 border-red-200 text-red-900',
-    gray: 'bg-gray-100 border-gray-200 text-gray-800',
+    gray: 'bg-gray-100 border-gray-200 text-gray-900',
   };
   return (
     <div className={`border rounded-lg px-3 py-2 text-center ${styles[tone]}`}>

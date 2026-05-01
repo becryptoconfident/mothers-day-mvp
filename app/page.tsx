@@ -1,385 +1,333 @@
+import Image from 'next/image';
 import Link from 'next/link';
-import fs from 'node:fs';
-import path from 'node:path';
-import CountdownBar from './_components/Countdown';
+import TipJar from './_components/TipJar';
+import StandaloneTipForm from './_components/StandaloneTipForm';
+import ForeverPreview from './_components/ForeverPreview';
 
-function findPitchAudio(): string | null {
-  const candidates = ['pitch.mp3', 'pitch.m4a', 'pitch.webm', 'pitch.wav'];
-  for (const name of candidates) {
-    const fp = path.join(process.cwd(), 'public', name);
-    try {
-      if (fs.existsSync(fp)) return `/${name}`;
-    } catch {}
-  }
-  return null;
-}
+const FIVE_FOUR_THREE: Array<{ n: string; label: string }> = [
+  { n: '5', label: 'minutes' },
+  { n: '4', label: 'questions' },
+  { n: '3', label: 'messages' },
+  { n: '2', label: 'photos' },
+  { n: '1', label: 'forever page' },
+];
+
+const STEPS: Array<{ n: number; text: string }> = [
+  { n: 1, text: 'Answer 4 questions about your mom.' },
+  { n: 2, text: 'We write 3 messages you can send her.' },
+  { n: 3, text: 'She gets a page she keeps forever.' },
+];
 
 export default function Home() {
-  const pitchAudio = findPitchAudio();
   return (
-    <div className="min-h-screen bg-gradient-to-b from-rose-50 via-white to-white">
-      <div className="max-w-3xl mx-auto px-4 py-12 md:py-16">
-        {/* Hero */}
-        <div className="text-center mb-4">
-          <span className="text-3xl">🌷</span>
-        </div>
-        <h1 className="font-serif text-4xl md:text-6xl text-center mb-4 leading-tight tracking-tight text-gray-900">
-          Stop drowning in guilt every year.
-        </h1>
-        <p className="text-xl md:text-2xl text-center text-gray-800 font-semibold mb-3 italic">
-          The only f-up this year is fixin to be the favorite.
-        </p>
-        <p className="text-base md:text-lg text-center text-gray-600 mb-8">
-          Give me a shot.
-        </p>
-
-        <CountdownBar />
-
-        {pitchAudio ? (
-          <div className="max-w-md mx-auto mb-12 text-center">
-            <p className="text-xs uppercase tracking-wide text-gray-800 mb-2">
-              60 seconds from Memphis
-            </p>
-            <audio controls src={pitchAudio} className="w-full" />
-          </div>
-        ) : null}
-
-        {/* Pitch */}
-        <div className="mb-14 max-w-2xl mx-auto text-lg leading-relaxed text-gray-800 space-y-4">
-          <p>
-            You&rsquo;re going to come away with an all-encompassing <strong>Mother Lover Package</strong>:
+    <>
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-white focus:px-4 focus:py-2 focus:rounded-lg focus:outline-2 focus:outline-rose-500"
+      >
+        Skip to content
+      </a>
+      <main id="main" className="bg-white">
+        {/* Above the fold — three things, lots of air */}
+        <section className="max-w-3xl mx-auto px-6 py-32 md:py-44 text-center">
+          <h1 className="font-serif text-[48px] md:text-[80px] leading-[1.02] tracking-tight text-gray-950 mb-8">
+            5 minutes for you. Mother&rsquo;s Day nailed.
+          </h1>
+          <p className="text-lg text-gray-700 max-w-xl mx-auto leading-relaxed mb-12">
+            Costs nothing. You walk away with something real for your mom.
           </p>
-          <p>
-            A full week of personalized, prewritten messages sent to <em>you</em> daily so you can
-            deliver a little mom love every day all week.
-          </p>
-          <p className="text-gray-600 italic">
-            I bet your sister isn&rsquo;t doing that. You&rsquo;re the new favorite.
-          </p>
-          <p>For just a little more, you can add some sentimental photos or audio.</p>
-          <p>
-            And for just a <em>liiiitle</em> bit more, you get to customize your own Mother&rsquo;s Day
-            digital treasure hunt. You choose the adventure.
-          </p>
-          <p className="text-sm text-gray-800 italic">Kleenex not provided.</p>
-          <p>
-            And hey, if it really sucks, shoot me some feedback and you&rsquo;ll get a refund.
-          </p>
-          <p className="text-gray-600 italic">
-            I&rsquo;m just a neurodivergent dude making things for messes.
-          </p>
-        </div>
+          <Link
+            href="/builder"
+            className="inline-flex items-center justify-center bg-rose-600 text-white text-lg font-medium rounded-full px-10 py-5 shadow-lg hover:shadow-xl hover:bg-rose-700 transition-all duration-200 focus:outline-2 focus:outline-rose-500 focus:outline-offset-2 min-h-[60px]"
+          >
+            Give It a Shot →
+          </Link>
+        </section>
 
-        {/* Bragging callout — what she actually buys */}
-        <div className="max-w-2xl mx-auto mb-14">
-          <div className="bg-rose-50 border-2 border-rose-300 rounded-2xl p-6 md:p-8 shadow-sm">
-            <p className="font-serif text-2xl md:text-3xl leading-snug mb-4 text-gray-900">
-              She&rsquo;s going to get to brag so fucking hard.
-            </p>
-            <p className="text-base md:text-lg text-gray-800 mb-5">
-              That&rsquo;s what you&rsquo;re buying. Mother loving empowerment.
-            </p>
-            <ul className="space-y-1.5 text-base md:text-lg text-gray-800 mb-5">
-              <li><strong>Monday:</strong> She&rsquo;s telling her husband Bob.</li>
-              <li><strong>Tuesday:</strong> She&rsquo;s telling her sister.</li>
-              <li><strong>Wednesday:</strong> Her church group knows.</li>
-              <li><strong>Thursday:</strong> It&rsquo;s a trend. Watch out, people at work.</li>
-              <li><strong>By Friday:</strong> You&rsquo;re the best kid a mother could ask for.</li>
-            </ul>
-            <p className="text-base md:text-lg text-gray-800 mb-4">
-              You&rsquo;re cruising into Mother&rsquo;s Day weekend ready to talk shit to your sister who got her flowers. Real original, Sybil.
-            </p>
-            <p className="text-base md:text-lg text-gray-700 italic">
-              All because you spent 5 minutes on the toilet.
-            </p>
-          </div>
-
-          {/* Primary CTA right after bragging — clear next click */}
-          <div className="text-center mt-6">
-            <Link
-              href="/builder?tier=2"
-              className="inline-block bg-rose-500 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-rose-600 shadow-sm"
-            >
-              Start Here — See My Messages Free →
-            </Link>
-            <p className="text-xs text-gray-800 mt-2">No card up front. 5 questions. ~5 minutes.</p>
-          </div>
-        </div>
-
-        {/* Toilet callout — the sale (now first, before proof) */}
-        <div className="max-w-2xl mx-auto mb-10">
-          <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6 md:p-8 text-center shadow-sm">
-            <p className="text-2xl md:text-3xl font-bold leading-snug mb-4">
-              Do the whole thing from your phone.<br />
-              On the toilet.<br />
-              While you&rsquo;re pooping.<br />
-              I&rsquo;m not joking.
-            </p>
-            <p className="text-base md:text-lg text-gray-700">
-              This year you&rsquo;re nailing it and your mom gets a whole week.
-            </p>
-          </div>
-        </div>
-
-        {/* Example card — the proof, now after the sale */}
-        <div className="max-w-2xl mx-auto mb-14">
-          <p className="text-center text-base md:text-lg text-gray-800 mb-5">
-            Here&rsquo;s what you&rsquo;ll actually be sent to forward to your mother:
-          </p>
-          <div className="bg-white rounded-2xl border border-rose-200 shadow-sm p-6 md:p-8 relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-rose-300 via-amber-300 to-rose-300" />
-            <div className="text-xs uppercase tracking-widest text-rose-700 font-semibold mb-3">
-              Day 1 of 7 · arrives in your inbox May 4th
-            </div>
-            <p className="font-serif text-lg md:text-xl leading-relaxed text-gray-800">
-              Hey Mom — thinking about how you always make that soup when I&rsquo;m
-              sick. You drove 2 hours to bring it to me in college. I still use the
-              same blue tupperware. Just wanted you to know I notice.
-            </p>
-          </div>
-          <p className="text-center text-sm text-gray-800 mt-4 italic">
-            ↑ AI wrote that from the answer: &ldquo;Makes soup when I&rsquo;m sick&rdquo;
-          </p>
-        </div>
-
-        {/* Email-flow clarity callout — set expectations before pricing */}
-        <div className="max-w-2xl mx-auto mb-10">
-          <div className="bg-white border-2 border-gray-200 rounded-2xl p-5 md:p-6 shadow-sm">
-            <p className="text-xs uppercase tracking-widest text-gray-800 mb-2 font-semibold">
-              How this actually works
-            </p>
-            <p className="text-base md:text-lg text-gray-800 mb-2">
-              We email the messages to <strong>YOU</strong> each morning May 4th–10th.
-              You copy/paste and text them to your mom from your phone.
-            </p>
-            <p className="text-sm text-gray-600">
-              We do <strong>not</strong> send anything directly to her. You&rsquo;re in control of every message —
-              and the text comes from your real phone number, not a robot.
-            </p>
-          </div>
-        </div>
-
-        {/* Tier cards */}
-        <div className="grid md:grid-cols-3 gap-4 md:gap-5 mb-12">
-          <TierCard
-            name="Mother Lover Package"
-            price="$19"
-            guilt="Do you remember being born? She does."
-            href="/builder?tier=1"
-            primary={false}
-            features={[
-              'Answer 5 questions about your mom',
-              'Get 7 prewritten messages (one for each day, May 4th–10th)',
-              'We email you one every morning',
-              'You copy, paste, send',
-              'You&rsquo;re the new favorite',
-            ]}
-            cta="See My Messages (Free) →"
-          />
-          <TierCard
-            name="+ Feels"
-            price="$29"
-            guilt="She drove you to soccer practice for 6 years. This takes 15 minutes."
-            href="/builder?tier=2"
-            primary={true}
-            badge="Most people pick this"
-            features={[
-              'Everything above',
-              'Add 2–3 photos, videos, or audio clips',
-              'We put them in the messages',
-              'She pauses',
-              'Maybe cries a little',
-            ]}
-            cta="See My Messages (Free) →"
-          />
-          <TierCard
-            name="+ Feels + Forever Page"
-            price="$49"
-            guilt="She still has your finger paintings. Give her something she'll keep forever."
-            href="/builder?tier=3"
-            primary={false}
-            features={[
-              'Everything above',
-              'A private webpage just for her',
-              'All 7 messages, your photos, a timeline of memories',
-              'AI-written letter to mom (3–4 paragraphs)',
-              'Optional 2-minute video message from you',
-              'Lives forever. She can share it with family.',
-              'You can update it next year.',
-            ]}
-            cta="See My Messages (Free) →"
-          />
-        </div>
-
-        {/* Safety */}
-        <div className="bg-rose-50/60 border border-rose-100 rounded-2xl p-6 md:p-8 mb-12">
-          <h2 className="font-serif text-2xl mb-5 text-gray-900">The safety thing</h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <p className="font-semibold mb-2">Before you pay</p>
-              <ul className="space-y-1.5 text-gray-700">
-                <li>• Read your first 2 messages free</li>
-                <li>• Edit them if you want</li>
-                <li>• Don&rsquo;t like them? Don&rsquo;t pay.</li>
-              </ul>
-            </div>
-            <div>
-              <p className="font-semibold mb-2">After you pay</p>
-              <ul className="space-y-1.5 text-gray-700">
-                <li>• Edit messages until May 3rd</li>
-                <li>• Change photos/videos until May 3rd</li>
-                <li>
-                  • Still don&rsquo;t like it? Email me. I refund you. You tell me what sucked.
+        <div className="max-w-4xl mx-auto px-6 space-y-24 md:space-y-32 pb-24 md:pb-32">
+          {/* 5-4-3-2-1 — just the grid, no copy */}
+          <section aria-label="What you get">
+            <ul role="list" className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+              {FIVE_FOUR_THREE.map((item) => (
+                <li
+                  key={item.n}
+                  className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 p-8 text-center"
+                >
+                  <div className="font-serif text-5xl text-gray-950 leading-none">
+                    {item.n}
+                  </div>
+                  <div className="mt-4 text-sm text-gray-700">{item.label}</div>
                 </li>
-              </ul>
-            </div>
-          </div>
-        </div>
+              ))}
+            </ul>
+          </section>
 
-        {/* What you actually do */}
-        <div className="mb-12">
-          <h2 className="font-serif text-2xl md:text-3xl mb-6 text-gray-900">What you actually do</h2>
-          <div className="space-y-6">
-            <div>
-              <h3 className="font-bold text-base mb-2">TODAY (5–15 minutes)</h3>
-              <ul className="space-y-1 text-gray-700">
-                <li>• Answer 5 questions</li>
-                <li>• See the 7 messages</li>
-                <li>• Add photos if you want (optional)</li>
-                <li>• Pay if they don&rsquo;t suck</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-bold text-base mb-2">MAY 4TH–10TH (30 seconds per day)</h3>
-              <ul className="space-y-1 text-gray-700">
-                <li>• We email you at 8am</li>
-                <li>• You open it</li>
-                <li>• You copy the message</li>
-                <li>• You paste it in a text to your mom</li>
-                <li>• You send it</li>
-                <li>• Done</li>
-              </ul>
-              <p className="text-sm text-gray-600 italic mt-3">
-                Make sure you email those to your mom! I&rsquo;ll nudge you tomorrow if you need me to.
+          {/* How it works — 3 steps */}
+          <section className="max-w-2xl mx-auto" aria-labelledby="how-h">
+            <h2 id="how-h" className="font-serif text-3xl md:text-4xl text-center text-gray-950 mb-10">
+              How it works
+            </h2>
+            <ol className="space-y-6">
+              {STEPS.map((step) => (
+                <li key={step.n} className="flex items-start gap-5">
+                  <span
+                    aria-hidden="true"
+                    className="flex-none flex items-center justify-center w-9 h-9 rounded-full bg-gray-950 text-white text-sm font-medium"
+                  >
+                    {step.n}
+                  </span>
+                  <p className="text-lg text-gray-700 leading-relaxed pt-1.5">
+                    {step.text}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          {/* The truth — pull quote */}
+          <section className="max-w-2xl mx-auto" aria-labelledby="truth-h">
+            <div className="border-l-4 border-rose-600 pl-8 py-2">
+              <h2 id="truth-h" className="font-serif text-3xl md:text-5xl text-gray-950 mb-5">
+                I don&rsquo;t forget Mother&rsquo;s Day. I just freeze.
+              </h2>
+              <p className="text-lg text-gray-800 leading-relaxed mb-3">
+                Birthdays. Christmas. Mother&rsquo;s Day. I know what I feel, I just can&rsquo;t get it out.
+              </p>
+              <p className="text-lg text-gray-800 leading-relaxed">
+                So I built something that helps. Maybe you need it too.
               </p>
             </div>
+          </section>
+
+          {/* Keepsake — short */}
+          <section className="max-w-2xl mx-auto" aria-labelledby="keepsake-h">
+            <h2 id="keepsake-h" className="font-serif text-3xl md:text-5xl text-gray-950 mb-5">
+              It&rsquo;s a real keepsake. For free.
+            </h2>
+            <p className="text-lg text-gray-800 leading-relaxed mb-3">
+              On Mother&rsquo;s Day morning, she gets a private webpage just for her.
+            </p>
+            <p className="text-lg text-gray-800 leading-relaxed mb-3">
+              All 3 messages, your photos, an AI-written letter from you. In her language.
+            </p>
+            <p className="text-lg text-gray-700 italic">
+              It&rsquo;s hers forever. And it costs nothing to make.
+            </p>
+          </section>
+
+          {/* Forever page preview */}
+          <section className="max-w-2xl mx-auto" aria-labelledby="preview-h">
+            <p id="preview-h" className="font-serif text-3xl md:text-5xl text-gray-950 mb-8 text-center">
+              This is what she gets.
+            </p>
+            <ForeverPreview />
+            <p className="text-lg text-gray-800 leading-relaxed mt-8 text-center max-w-xl mx-auto">
+              A private page. Her messages. Her photos. A letter from you.
+              She keeps it forever.
+            </p>
+          </section>
+
+          {/* Bragging — short list */}
+          <section className="max-w-2xl mx-auto" aria-labelledby="brag-h">
+            <h2 id="brag-h" className="font-serif text-3xl md:text-5xl text-gray-950 mb-6">
+              She&rsquo;s going to brag for days.
+            </h2>
+            <ul className="space-y-3 text-lg text-gray-700">
+              <li><span className="text-gray-950 font-medium">Friday:</span> She&rsquo;s telling her husband Bob.</li>
+              <li><span className="text-gray-950 font-medium">Saturday:</span> Her sister knows.</li>
+              <li><span className="text-gray-950 font-medium">Sunday:</span> She&rsquo;s calling you crying.</li>
+            </ul>
+          </section>
+
+          {/* Second CTA — same as the top */}
+          <div className="text-center">
+            <Link
+              href="/builder"
+              className="inline-flex items-center justify-center bg-rose-600 text-white text-lg font-medium rounded-full px-10 py-5 shadow-lg hover:shadow-xl hover:bg-rose-700 transition-all duration-200 focus:outline-2 focus:outline-rose-500 focus:outline-offset-2 min-h-[60px]"
+            >
+              Give It a Shot →
+            </Link>
           </div>
-          <p className="text-sm text-gray-800 mt-6">
-            Mother&rsquo;s Day is May 10th. That&rsquo;s 12 days from now.
-          </p>
-        </div>
 
-        {/* FAQ */}
-        <div className="mb-16">
-          <h2 className="font-serif text-2xl md:text-3xl mb-5 text-gray-900">FAQ</h2>
-          <div className="space-y-5">
-            <FaqRow
-              q="What if the messages sound dumb?"
-              a="Then don&rsquo;t pay. You read the first 2 free first."
-            />
-            <FaqRow
-              q="What if I forget to send one?"
-              a="We email you every morning. Hard to forget."
-            />
-            <FaqRow
-              q="What if this is actually stupid?"
-              a="Email me. I refund you. You tell me what to fix."
-            />
-            <FaqRow
-              q="Can I do this on my phone?"
-              a="Do the whole thing from your phone. On the toilet. While you&rsquo;re pooping. I&rsquo;m not joking."
-            />
+          {/* About the creator */}
+          <section id="about" className="max-w-2xl mx-auto scroll-mt-12" aria-labelledby="about-h">
+            <h2 id="about-h" className="font-serif text-3xl md:text-5xl text-gray-950 mb-8">
+              About the creator
+            </h2>
+            <div className="flex flex-col md:flex-row md:items-start gap-6 md:gap-8">
+              <Image
+                src="/memphis.png"
+                alt="Memphis Carter"
+                width={96}
+                height={96}
+                className="rounded-full shadow-md flex-none"
+              />
+              <div className="flex-1">
+                <p className="font-medium text-gray-950">Memphis Carter</p>
+                <a
+                  href="https://x.com/memphis__carter"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-rose-600 hover:text-rose-700 underline underline-offset-4 text-sm"
+                >
+                  @memphis__carter
+                </a>
+                <div className="mt-6 space-y-4 text-lg text-gray-800 leading-relaxed">
+                  <p>
+                    Three years ago I found out I have{' '}
+                    <span className="font-semibold text-gray-950">Borderline Personality Disorder</span>.
+                  </p>
+                  <p>
+                    Years of depression, anxiety, and thoughts of self-harm — I was finally
+                    able to put a name to it. Now I&rsquo;m learning about myself all over again.
+                  </p>
+                  <p>
+                    This is a tool for people like me. It&rsquo;s also a tool for people not like
+                    me. It&rsquo;s a tool to speak kindness and love into the world. We need to
+                    produce more of that energy.
+                  </p>
+                  <p>
+                    I spent 15 years in education — two as an assistant principal. I left to
+                    find better ways to give people a voice. This is one of them.
+                  </p>
+                  <p>
+                    <a
+                      href="#tip-jar"
+                      className="text-rose-600 hover:text-rose-700 font-medium"
+                    >
+                      Share
+                    </a>{' '}
+                    it with anyone who finds value. It&rsquo;s free. If you can{' '}
+                    <a
+                      href="#about-amount"
+                      className="text-rose-600 hover:text-rose-700 font-medium"
+                    >
+                      contribute
+                    </a>
+                    , please do. I&rsquo;m an unemployed teacher trying to put more love in the world.
+                  </p>
+                </div>
+
+                {/* BPD reveal — collapsed by default, opens in place */}
+                <details className="mt-6 group">
+                  <summary className="list-none cursor-pointer text-rose-600 hover:text-rose-700 font-medium text-base focus:outline-2 focus:outline-rose-500 focus:outline-offset-2 [&::-webkit-details-marker]:hidden">
+                    <span className="group-open:hidden">What is BPD? →</span>
+                    <span className="hidden group-open:inline">Close</span>
+                  </summary>
+                  <div className="mt-6 space-y-6">
+                    <div className="space-y-4 text-lg text-gray-800 leading-relaxed">
+                      <p>
+                        BPD is a mental health condition that affects how you experience emotions,
+                        relationships, and your sense of self.
+                      </p>
+                      <p>It can look like:</p>
+                      <ul className="space-y-2">
+                        {[
+                          'Emotions that hit fast and hard — then disappear',
+                          'Wanting to connect but not knowing how',
+                          'Freezing when it’s time to express how you feel',
+                          'Fear of being too much or not enough',
+                          'Struggling with birthdays, holidays, and moments that are supposed to feel easy',
+                        ].map((item) => (
+                          <li key={item} className="relative pl-6">
+                            <span
+                              aria-hidden="true"
+                              className="absolute left-0 top-[0.7em] w-1.5 h-1.5 rounded-full bg-rose-600"
+                            />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                      <p>
+                        It&rsquo;s more common than people think. About 1.4% of adults in the US
+                        live with it. Most go years without knowing.
+                      </p>
+                      <p>I went decades.</p>
+                    </div>
+
+                    <div className="border-t border-gray-100" />
+
+                    <div className="space-y-4 text-lg text-gray-800 leading-relaxed">
+                      <p>If any of this sounds familiar — reach out to me.</p>
+                      <p>Not to diagnose you. Not to give advice. Just to talk.</p>
+                      <p>
+                        If you need help finding resources, I&rsquo;ll help you find them. No cost.
+                        No judgment.
+                      </p>
+                      <p>
+                        I&rsquo;m at{' '}
+                        <a
+                          href="https://x.com/memphis__carter"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-rose-600 hover:text-rose-700 underline underline-offset-4 font-medium"
+                        >
+                          @memphis__carter
+                        </a>{' '}
+                        on X. DMs are open.
+                      </p>
+                    </div>
+
+                    <div className="border-t border-gray-100" />
+
+                    <div className="space-y-5">
+                      <p className="text-lg text-gray-800 leading-relaxed">
+                        If you&rsquo;re in crisis right now:
+                      </p>
+                      <div>
+                        <p className="text-base text-gray-800">988 Suicide &amp; Crisis Lifeline</p>
+                        <p className="mt-1 text-gray-800">
+                          Call or text{' '}
+                          <a
+                            href="tel:988"
+                            className="font-semibold text-gray-950 text-xl hover:text-rose-700"
+                          >
+                            988
+                          </a>
+                          . Available 24/7.
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-base text-gray-800">Crisis Text Line</p>
+                        <p className="mt-1 text-gray-800">
+                          Text HOME to{' '}
+                          <a
+                            href="sms:741741?body=HOME"
+                            className="font-semibold text-gray-950 text-xl hover:text-rose-700"
+                          >
+                            741741
+                          </a>
+                          .
+                        </p>
+                      </div>
+                      <p className="text-gray-700">
+                        You&rsquo;re not alone. These are free and confidential.
+                      </p>
+                    </div>
+                  </div>
+                </details>
+
+                <StandaloneTipForm id="about" />
+              </div>
+            </div>
+          </section>
+
+          {/* Tip jar */}
+          <div id="tip-jar" className="scroll-mt-12">
+            <TipJar variant="normal" />
           </div>
         </div>
 
-        {/* Single CTA */}
-        <div className="text-center mb-16">
-          <Link
-            href="/builder?tier=2"
-            className="inline-block bg-rose-500 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-rose-600 shadow-sm"
-          >
-            See My Messages (Free) →
-          </Link>
-          <p className="text-xs text-gray-800 mt-3">No card up front. See the messages first.</p>
-        </div>
-
-        <div className="text-center text-gray-600 pt-12 border-t">
-          <p className="text-sm italic">
-            I&rsquo;m just a neurodivergent dude making things for messes.
-          </p>
-          <p className="text-sm mt-3">
-            I built this for my mom Bonnie. So this year I&rsquo;m the favorite. Now you can be too.
-          </p>
-          <p className="font-serif text-xl text-rose-700 mt-4 tracking-wide">#doitforbonnie</p>
-          <p className="text-xs text-gray-800 mt-2 italic">
-            Use the tag with your mom&rsquo;s name. Pass it on.
-          </p>
-          <p className="text-sm mt-6">
-            <a href="https://memphiscarter.com" className="underline">memphiscarter.com</a>
-            <span className="mx-2 text-gray-700">|</span>
-            <a href="https://twitter.com/memphis__carter" className="underline">@memphis__carter</a>
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TierCard(props: {
-  name: string;
-  price: string;
-  guilt?: string;
-  href: string;
-  primary: boolean;
-  features: string[];
-  cta: string;
-  badge?: string;
-}) {
-  const border = props.primary ? 'border-rose-500' : 'border-gray-200';
-  const cardBg = props.primary ? 'bg-white shadow-md' : 'bg-white/70';
-  const button = props.primary
-    ? 'bg-rose-500 text-white hover:bg-rose-600'
-    : 'bg-gray-900 text-white hover:bg-gray-800';
-  return (
-    <div className={`relative border-2 ${border} ${cardBg} rounded-2xl p-5 md:p-6 flex flex-col`}>
-      {props.badge ? (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-rose-500 text-white px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap shadow-sm">
-          {props.badge}
-        </div>
-      ) : null}
-      <h3 className="font-serif text-lg tracking-tight mb-1 text-gray-900">{props.name}</h3>
-      <p className="text-3xl font-bold mb-1 text-gray-900">{props.price}</p>
-      {props.guilt ? (
-        <p className="text-xs italic text-rose-700/90 mb-4 leading-snug">{props.guilt}</p>
-      ) : (
-        <div className="mb-3" />
-      )}
-      <ul className="space-y-1.5 mb-5 flex-1 text-sm">
-        {props.features.map((f, i) => (
-          <li key={i} className="flex items-start">
-            <span className="text-rose-500 mr-2 mt-0.5">✓</span>
-            <span dangerouslySetInnerHTML={{ __html: f }} />
-          </li>
-        ))}
-      </ul>
-      <Link
-        href={props.href}
-        className={`block w-full text-center py-3.5 rounded-xl font-semibold text-base ${button} transition`}
-      >
-        {props.cta}
-      </Link>
-      <p className="text-center text-xs text-gray-800 italic mt-2">
-        Works on your phone. Yes, even on the toilet.
-      </p>
-    </div>
-  );
-}
-
-function FaqRow({ q, a }: { q: string; a: string }) {
-  return (
-    <div>
-      <p className="font-semibold mb-1" dangerouslySetInnerHTML={{ __html: `"${q}"` }} />
-      <p className="text-gray-700" dangerouslySetInnerHTML={{ __html: a }} />
-    </div>
+        {/* Footer */}
+        <footer className="border-t border-gray-100 bg-white">
+          <div className="max-w-2xl mx-auto px-6 py-12 text-center text-sm text-gray-700">
+            <p>Built by someone who gets it, for people like me.</p>
+            <p className="mt-6 text-xs text-gray-600">
+              We email YOU. You text mom. We never message her directly.
+            </p>
+          </div>
+        </footer>
+      </main>
+    </>
   );
 }

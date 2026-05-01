@@ -1,94 +1,73 @@
 // AI prompt templates for message + hunt clue generation.
 // Email-mode: messages can breathe more than SMS, but stay tight.
 
-export const MESSAGES_SYSTEM_PROMPT = `You are writing personalized Mother's Day messages for a son or daughter who loves their mom but struggles to express feelings.
+export const MESSAGES_SYSTEM_PROMPT = `You are writing 3 Mother's Day messages from a son or daughter who loves their mom but struggles to express feelings.
 
-Generate 7 messages, one per day, leading to Mother's Day.
+The person answered four questions about their mom. Three of those answers feed the three daily messages. The fourth (the future) is reserved for a separate forever-page letter — DO NOT use Question 4 in these messages.
+
+Message arc:
+- Message 1 (Friday, May 8 — two days before Mother's Day):
+    Based on Question 1 (the memory). Warm opener.
+    Open with something like "Hey Mom, I've been thinking about..."
+    Specific. Observational. Sets the tone.
+- Message 2 (Saturday, May 9 — day before Mother's Day):
+    Based on Question 2 (the thing she does that nobody else does).
+    Shows the writer pays attention to who she is as a person, not just "mom."
+    Building emotional momentum.
+- Message 3 (Sunday, May 10 — Mother's Day morning, the finale):
+    Based on Question 3 (the unsaid thing).
+    The most emotional one. The one that makes her cry.
+    End with: "Happy Mother's Day. I love you."
 
 CRITICAL RULES:
 - Use contractions (don't, you're, I'm, she'll)
-- Be SPECIFIC — quote actual details from the user's answers, not generic platitudes
-- Conversational tone (like a long text or a short letter, not a greeting card)
-- 2-4 sentences per message, ~40-90 words each
+- Be SPECIFIC — quote actual details from the answers, not generic platitudes
+- Conversational tone — like a long text or short letter, not a greeting card
+- 40-80 words each
 - Vulnerable but not over-the-top sappy
-- Each message should feel DIFFERENT (vary structure, tone, opening)
-- Sign off naturally — not every message needs "love, [name]"
+- Each message feels DIFFERENT — vary structure, opening, rhythm
+- Use the mom's name if provided; otherwise "Mom"
+- Match the depth of the writer's answers — long answers → match depth; short answers → stay concise
 
-Day 1 (6 days before Mother's Day): Reference question_1, warm, observational
-Day 2 (5 days before): Tell story from question_2, make her smile
-Day 3 (4 days before): Acknowledge question_3, show lasting impact
-Day 4 (3 days before): Build on themes, add a small detail
-Day 5 (2 days before): Increase emotional weight; specific moment
-Day 6 (1 day before): Build anticipation; tomorrow is the day
-Day 7 (Mother's Day): Pull together, reference question_4, heartfelt finale
-
-VOICE NOTES:
-- If they gave long detailed answers → match that depth
-- If they gave short answers → keep concise
-- Avoid: "you're the best mom", "I'm so lucky", "I don't know what I'd do without you"
-- Prefer: Specific actions, specific memories, specific impacts
+Avoid: "you're the best mom," "I'm so lucky," "I don't know what I'd do without you," "you mean the world to me"
+Prefer: specific actions, specific memories, specific impacts
 
 Return ONLY valid JSON (no markdown, no explanation):
 {
   "day_1": "message text",
   "day_2": "message text",
-  "day_3": "message text",
-  "day_4": "message text",
-  "day_5": "message text",
-  "day_6": "message text",
-  "day_7": "message text"
+  "day_3": "message text"
 }`;
 
 export const generateMessagesPrompt = (answers: {
   question_1: string;
   question_2: string;
   question_3: string;
-  question_4: string;
-}) => `User's answers about their mom:
+  mom_nickname?: string;
+  mom_name?: string;
+  language?: string;
+}) => {
+  const lang =
+    answers.language && answers.language.trim() && answers.language.toLowerCase() !== 'english'
+      ? answers.language.trim()
+      : null;
+  const langLine = lang
+    ? `\nWrite all 3 messages in ${lang}. Write naturally in that language — not translated-sounding. Write like a native speaker would text their mom.\n`
+    : '';
+  const nick = answers.mom_nickname?.trim();
+  const first = answers.mom_name?.trim();
+  const namesLine =
+    nick || first
+      ? `\nThe user calls their mom${nick ? ` "${nick}"` : ' Mom'}.${first ? ` Mom's first name is ${first}.` : ''} Use${nick ? ` "${nick}"` : ' "Mom"'} when addressing her in the messages — it's what they actually say.\n`
+      : '';
+  return `Writer's answers about their mom:
 
-1. What she does for them: "${answers.question_1}"
-2. Funny memory they share: "${answers.question_2}"
-3. What she taught them: "${answers.question_3}"
-4. What they'd say if not awkward about feelings: "${answers.question_4}"
-
-Generate 7 messages now using these specific details.`;
-
-// Days 1+2 preview generator: shown free on /preview as a sample. The other
-// 5 messages are generated only after Stripe confirms payment.
-export const PREVIEW_DAYS_1_2_SYSTEM_PROMPT = `You are writing TWO Mother's Day messages — Day 1 and Day 2 of 7 — for a son or daughter who loves their mom but struggles to express feelings.
-
-These are the SAMPLE messages they'll see before paying. Make them good — specific, warm, conversational. They should feel different from each other (different theme, different rhythm) so the buyer sees the AI can hold range across the whole week.
-
-CRITICAL RULES (apply to both):
-- Use contractions
-- Be SPECIFIC — quote actual details from their answers, not generic platitudes
-- Conversational tone (like a long text or short letter, not a greeting card)
-- 2-4 sentences, ~40-90 words each
-- Vulnerable but not over-the-top sappy
-- Make Day 1 and Day 2 feel DIFFERENT — vary structure, opening, tone
-
-Day 1 theme: what she does for them (pull primarily from question_1). Warm, observational.
-Day 2 theme: a funny memory (pull primarily from question_2). Make her smile.
-
-Avoid: "you're the best mom", "I'm so lucky", "I don't know what I'd do without you"
-Prefer: Specific actions, specific memories, specific impacts
-
-Return ONLY valid JSON (no markdown, no explanation):
-{ "day_1": "message text", "day_2": "message text" }`;
-
-export const generatePreviewDays12Prompt = (answers: {
-  question_1: string;
-  question_2: string;
-  question_3: string;
-  question_4: string;
-}) => `User's answers about their mom:
-
-1. What she does for them: "${answers.question_1}"
-2. Funny memory they share: "${answers.question_2}"
-3. What she taught them: "${answers.question_3}"
-4. What they'd say if not awkward about feelings: "${answers.question_4}"
-
-Generate Day 1 and Day 2 only. Pull Day 1 primarily from answer #1, Day 2 primarily from answer #2.`;
+Q1 — A specific moment with mom they'll never forget: "${answers.question_1}"
+Q2 — Something mom does that nobody else does: "${answers.question_2}"
+Q3 — Something they've never told mom but she should know: "${answers.question_3}"
+${namesLine}${langLine}
+Write Message 1 (Friday) primarily from Q1, Message 2 (Saturday) primarily from Q2, Message 3 (Sunday/Mother's Day) primarily from Q3. Generate all three now.`;
+};
 
 export const HUNT_CLUE_SYSTEM_PROMPT = `You are writing riddles for a digital Mother's Day treasure hunt.
 

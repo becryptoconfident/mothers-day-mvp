@@ -1,789 +1,625 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { StepBreadcrumb, NextLine } from '../_components/StepBreadcrumb';
+import MessageActions from '../_components/MessageActions';
+import TipJar from '../_components/TipJar';
+import VoiceNoteSection from './VoiceNoteSection';
+import CustomizeSection, { type ThemeKey } from './CustomizeSection';
 
-type Tier = 1 | 2 | 3;
+const STORAGE_BUILDER = 'mdmvp_builder_v3';
+const STORAGE_PREVIEW = 'mdmvp_preview_v3';
 
-// Soft gate: Days 1-2 always populated. Days 3-7 stay empty until payment.
-type Messages = Partial<Record<`day_${1 | 2 | 3 | 4 | 5 | 6 | 7}`, string>>;
-
-type MediaItem = {
-  day: number;
-  type: 'photo' | 'video' | 'audio' | 'youtube';
-  url: string;
-  caption?: string;
+type Answers = { question_1: string; question_2: string; question_3: string; question_4: string };
+type Messages = { day_1: string; day_2: string; day_3: string };
+type Contact = {
+  user_email: string;
+  user_name: string;
+  mom_nickname: string;
+  mom_name: string;
+  delivery_time: string;
+  delivery_timezone: string;
 };
+type MediaItem = { day: number; type: 'photo'; url: string; caption?: string };
 
-type ForeverData = {
-  long_note: string;
-  video_url: string;
-};
-
-type BuilderData = {
-  tier: Tier;
-  answers: Record<string, string>;
-  contact: {
-    user_name: string;
-    user_email: string;
-    mom_name: string;
-    mom_email: string;
-    delivery_time: string;
-    delivery_timezone: string;
-  };
-  extraReminders?: boolean;
-  wantsMedia: boolean;
-  mediaDays: number[];
-};
-
-const DAY_DATES = ['May 4th', 'May 5th', 'May 6th', 'May 7th', 'May 8th', 'May 9th', 'May 10th'];
-
-const DAY_THEMES = [
-  'What she does for you',
-  'Funny memory',
-  'What she taught you',
-  'Build on themes',
-  'Emotional weight',
-  'Anticipation',
-  'Mother’s Day finale',
+const LABELS: Array<{ key: keyof Messages; label: string; sub: string }> = [
+  { key: 'day_1', label: 'Friday, May 8th', sub: 'The Memory' },
+  { key: 'day_2', label: 'Saturday, May 9th', sub: 'What She Does' },
+  { key: 'day_3', label: 'Sunday, May 10th', sub: "Mother's Day — The Unsaid" },
 ];
-
-// Hash answers cheaply so saved /preview state is invalidated when the user
-// changes their answers in the builder and comes back.
-function hashAnswers(a: Record<string, string>): string {
-  return [a.question_1, a.question_2, a.question_3, a.question_4]
-    .map((s) => (s || '').slice(0, 60))
-    .join('|');
-}
-
-const PREVIEW_STORAGE_KEY = 'previewData';
 
 export default function PreviewPage() {
   const router = useRouter();
-  const [data, setData] = useState<BuilderData | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+  const [language, setLanguage] = useState('English');
+  const [answers, setAnswers] = useState<Answers | null>(null);
   const [messages, setMessages] = useState<Messages | null>(null);
   const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+  const [contact, setContact] = useState<Contact>({
+    user_email: '',
+    user_name: '',
+    mom_nickname: '',
+    mom_name: '',
+    delivery_time: '09:00',
+    delivery_timezone:
+      typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Chicago' : 'America/Chicago',
+  });
   const [media, setMedia] = useState<MediaItem[]>([]);
-  const [foreverData, setForeverData] = useState<ForeverData>({ long_note: '', video_url: '' });
+  const [personalAudioUrl, setPersonalAudioUrl] = useState('');
+  const [personalNote, setPersonalNote] = useState('');
+  const [songUrl, setSongUrl] = useState('');
+  const [theme, setTheme] = useState<ThemeKey>('rose');
+  const [customHeadline, setCustomHeadline] = useState('');
+  const [customSignoff, setCustomSignoff] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [restored, setRestored] = useState(false);
-  const generatedOnceRef = useRef(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [photosOpen, setPhotosOpen] = useState(false);
 
+  // Hydrate state from localStorage on mount.
   useEffect(() => {
-    const raw = typeof window !== 'undefined' ? localStorage.getItem('builderData') : null;
-    if (!raw) {
-      router.replace('/builder');
-      return;
-    }
     try {
-      setData(JSON.parse(raw) as BuilderData);
-    } catch {
-      router.replace('/builder');
-    }
-  }, [router]);
-
-  // Restore prior /preview state if the user is returning (mobile tab reaped, accidental refresh, etc).
-  useEffect(() => {
-    if (!data || restored) return;
-    try {
-      const saved = localStorage.getItem(PREVIEW_STORAGE_KEY);
-      if (!saved) {
-        setRestored(true);
-        return;
+      const builderRaw = localStorage.getItem(STORAGE_BUILDER);
+      if (builderRaw) {
+        const parsed = JSON.parse(builderRaw);
+        if (parsed.answers) setAnswers(parsed.answers);
+        if (typeof parsed.language === 'string') {
+          setLanguage(
+            parsed.language === 'Other' && parsed.otherLanguage ? parsed.otherLanguage : parsed.language,
+          );
+        }
+        if (typeof parsed.momNickname === 'string' || typeof parsed.momName === 'string') {
+          setContact((c) => ({
+            ...c,
+            mom_nickname: typeof parsed.momNickname === 'string' ? parsed.momNickname : c.mom_nickname,
+            mom_name: typeof parsed.momName === 'string' ? parsed.momName : c.mom_name,
+          }));
+        }
       }
-      const parsed = JSON.parse(saved);
-      // Invalidate if the underlying builder answers changed.
-      if (parsed.answersHash === hashAnswers(data.answers)) {
+      const previewRaw = localStorage.getItem(STORAGE_PREVIEW);
+      if (previewRaw) {
+        const parsed = JSON.parse(previewRaw);
         if (parsed.messages) setMessages(parsed.messages);
+        if (parsed.contact) setContact((c) => ({ ...c, ...parsed.contact }));
         if (Array.isArray(parsed.media)) setMedia(parsed.media);
-        if (parsed.foreverData) setForeverData(parsed.foreverData);
-        if (parsed.messages) generatedOnceRef.current = true; // skip auto-regen
+        if (typeof parsed.personalAudioUrl === 'string') setPersonalAudioUrl(parsed.personalAudioUrl);
+        if (typeof parsed.personalNote === 'string') setPersonalNote(parsed.personalNote);
+        if (typeof parsed.songUrl === 'string') setSongUrl(parsed.songUrl);
+        if (typeof parsed.theme === 'string' && parsed.theme in { rose: 1, ocean: 1, sage: 1, sunset: 1, lavender: 1 }) {
+          setTheme(parsed.theme as ThemeKey);
+        }
+        if (typeof parsed.customHeadline === 'string') setCustomHeadline(parsed.customHeadline);
+        if (typeof parsed.customSignoff === 'string') setCustomSignoff(parsed.customSignoff);
       }
     } catch {}
-    setRestored(true);
-  }, [data, restored]);
+    setHydrated(true);
+  }, []);
 
+  // Save preview state on change.
   useEffect(() => {
-    if (!data || !restored || generatedOnceRef.current) return;
-    generatedOnceRef.current = true;
-    generate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, restored]);
-
-  // Persist /preview edits as the user makes them.
-  useEffect(() => {
-    if (!data || !restored) return;
+    if (!hydrated) return;
     try {
       localStorage.setItem(
-        PREVIEW_STORAGE_KEY,
+        STORAGE_PREVIEW,
         JSON.stringify({
-          answersHash: hashAnswers(data.answers),
           messages,
+          contact,
           media,
-          foreverData,
+          personalAudioUrl,
+          personalNote,
+          songUrl,
+          theme,
+          customHeadline,
+          customSignoff,
         }),
       );
     } catch {}
-  }, [data, restored, messages, media, foreverData]);
+  }, [
+    hydrated,
+    messages,
+    contact,
+    media,
+    personalAudioUrl,
+    personalNote,
+    songUrl,
+    theme,
+    customHeadline,
+    customSignoff,
+  ]);
 
-  async function generate() {
-    if (!data) return;
-    setGenerating(true);
-    setError(null);
-    try {
-      const r = await fetch('/api/generate-messages', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ ...data.answers, preview: true }),
-      });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error || 'generation failed');
-      // API returns { day_1, day_2 } in preview mode. Days 3-7 are sealed
-      // until payment — webhook generates them server-side.
-      setMessages(j.messages);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setGenerating(false);
-    }
-  }
+  // If no answers, redirect to builder.
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!answers) router.replace('/builder');
+  }, [hydrated, answers, router]);
 
-  function setMessage(day: number, text: string) {
-    if (!messages) return;
-    setMessages({ ...messages, [`day_${day}` as keyof Messages]: text });
-  }
+  // Generate messages on first load (only if not already cached).
+  useEffect(() => {
+    if (!hydrated || !answers) return;
+    if (messages && messages.day_1 && messages.day_2 && messages.day_3) return;
+    let cancelled = false;
+    (async () => {
+      setGenerating(true);
+      setGenerateError(null);
+      try {
+        const r = await fetch('/api/generate-messages', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            ...answers,
+            language,
+            mom_nickname: contact.mom_nickname || undefined,
+            mom_name: contact.mom_name || undefined,
+          }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'generation failed');
+        if (cancelled) return;
+        setMessages({
+          day_1: data.messages.day_1,
+          day_2: data.messages.day_2,
+          day_3: data.messages.day_3,
+        });
+      } catch (e) {
+        if (!cancelled) setGenerateError((e as Error).message);
+      } finally {
+        if (!cancelled) setGenerating(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, answers, language]);
 
-  async function checkout() {
-    if (!data || !messages) return;
+  const isReady = useMemo(() => {
+    return (
+      !!messages &&
+      !!messages.day_1 &&
+      !!messages.day_2 &&
+      !!messages.day_3 &&
+      contact.user_email.trim().length > 3 &&
+      contact.user_email.includes('@')
+    );
+  }, [messages, contact.user_email]);
+
+  async function submit() {
+    if (!answers || !messages || !isReady || submitting) return;
     setSubmitting(true);
-    setError(null);
+    setSubmitError(null);
     try {
       const r = await fetch('/api/create-checkout', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          tier: data.tier,
-          contact: data.contact,
-          answers: data.answers,
+          amount: 0,
+          contact,
+          answers,
           messages,
           media,
-          extra_reminders: !!data.extraReminders,
-          forever_data: data.tier === 3 ? foreverData : undefined,
+          language,
+          forever_data: {
+            language,
+            personal_audio_url: personalAudioUrl || undefined,
+            personal_note: personalNote.trim() || undefined,
+            song_url: songUrl.trim() || undefined,
+            theme,
+            headline: customHeadline.trim() || undefined,
+            signoff: customSignoff.trim() || undefined,
+          },
         }),
       });
-      const j = await r.json();
-      if (!r.ok || !j.url) throw new Error(j.error || 'checkout failed');
-      window.location.href = j.url;
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'failed to create order');
+      if (data.url) {
+        window.location.href = data.url;
+      }
     } catch (e) {
-      setError((e as Error).message);
+      setSubmitError((e as Error).message);
       setSubmitting(false);
     }
   }
 
-  if (!data) return <div className="p-8 text-center text-gray-800">Loading…</div>;
-
-  if (generating) {
+  if (!hydrated) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center">
-          <div className="text-2xl font-bold mb-2">Writing your samples…</div>
-          <p className="text-gray-600">~10 seconds. Don&rsquo;t close the tab.</p>
+      <main id="main" className="min-h-screen bg-white">
+        <div className="max-w-3xl mx-auto p-6 py-12">
+          <p className="text-gray-700">Loading…</p>
         </div>
-      </div>
+      </main>
     );
   }
 
-  if (error && !messages) {
+  if (!answers) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="max-w-md text-center">
-          <div className="text-2xl font-bold mb-2">Something broke.</div>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button onClick={generate} className="px-6 py-3 bg-blue-600 text-white rounded-lg">
-            Try again
-          </button>
+      <main id="main" className="min-h-screen bg-white">
+        <div className="max-w-3xl mx-auto p-6 py-12">
+          <p className="text-gray-700">Redirecting to the builder…</p>
         </div>
-      </div>
+      </main>
     );
   }
-
-  if (!messages) return null;
-
-  const totalMediaDays = data.tier >= 2 && data.wantsMedia ? data.mediaDays : [];
-  const tierAmount = data.tier === 1 ? 19 : data.tier === 2 ? 29 : 39;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-3xl mx-auto px-4">
-        <StepBreadcrumb
-          done="Answered all 5 questions"
-          current="Your first 2 days — read and edit"
-          next="pick a package and pay to unlock the other 5 (or close this tab — your edits are saved)"
-        />
-        <h1 className="text-3xl font-bold mb-2">Read the first 2. Then decide.</h1>
-        <p className="text-gray-600 mb-1">
-          Days 1 and 2 are yours to read free. If they sound right, the other 5 are coming. Don&rsquo;t like them? Don&rsquo;t pay.
-        </p>
-        <p className="text-xs text-gray-800 italic mb-1">Changes save automatically.</p>
-        <p className="text-sm text-gray-800 mb-8">
-          For: {data.contact.mom_name || 'mom'}
-          {data.extraReminders ? ' · gentle 1pm nudges enabled' : ''}
-        </p>
-
-        {totalMediaDays.length > 0 ? (
-          <div className="border-y border-rose-200 bg-rose-50/40 py-4 px-4 mb-6 rounded-lg">
-            <p className="text-xs uppercase tracking-wide text-rose-700 font-semibold mb-2">
-              Your media instructions
+    <>
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-white focus:px-4 focus:py-2 focus:rounded-lg focus:outline-2 focus:outline-rose-500"
+      >
+        Skip to content
+      </a>
+      <main id="main" className="min-h-screen bg-white">
+        <div className="max-w-3xl mx-auto px-6 py-12 md:py-16">
+          <header className="mb-12">
+            <p className="text-xs uppercase tracking-[0.2em] text-gray-700 mb-3">
+              Answered 4 questions · Here are your messages
             </p>
-            <ol className="space-y-1 text-sm text-gray-800">
-              <li>1. Pick up your phone.</li>
-              <li>2. Open Photos.</li>
-              <li>3. Search &ldquo;mom&rdquo;</li>
-              <li>4. Pick 2–3 you love.</li>
-              <li>5. Upload them here.</li>
-            </ol>
-          </div>
-        ) : null}
+            <h1 className="font-serif text-3xl md:text-4xl text-gray-950 mb-5 leading-[1.1]">
+              Here&rsquo;s what we came up with.{language && language !== 'English' ? ` (in ${language})` : ''}
+            </h1>
+            <p className="text-lg text-gray-800 leading-relaxed mb-3">
+              These are the bones. Read them, tweak them, make them sound like you. Or leave them as-is.
+            </p>
+            <p className="text-lg text-gray-800 leading-relaxed">
+              When you&rsquo;re ready, all you do is copy and paste. Text her. Email her. DM her. Whatever works.
+            </p>
+          </header>
 
-        <div className="space-y-4 mb-12">
-          {([1, 2] as const).map((day) => {
-            const text = messages[`day_${day}`] || '';
-            return (
-              <div
-                key={day}
-                className="bg-white rounded-2xl border-2 border-rose-200 p-5 shadow-sm"
+          {generating ? (
+            <section
+              aria-live="polite"
+              className="bg-white rounded-2xl p-8 mb-10 shadow-sm"
+            >
+              <p className="font-serif text-lg text-gray-950">Writing your messages…</p>
+              <p className="text-sm text-gray-700 mt-2">
+                Pulling specific details from your answers. Takes about 10 seconds.
+              </p>
+            </section>
+          ) : null}
+
+          {generateError ? (
+            <section className="bg-gray-50 rounded-2xl p-8 mb-10">
+              <p className="font-medium text-gray-950">Couldn&rsquo;t generate the messages.</p>
+              <p className="text-sm text-gray-800 mt-2">{generateError}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setMessages(null);
+                  setGenerateError(null);
+                }}
+                className="mt-4 inline-flex items-center justify-center px-6 py-3 min-h-[44px] rounded-full border border-gray-200 text-gray-700 text-sm font-medium hover:border-gray-400 transition-colors focus:outline-2 focus:outline-rose-500 focus:outline-offset-2"
               >
-                <div className="flex justify-between items-baseline mb-3">
-                  <div>
-                    <div className="text-xs text-rose-700 uppercase tracking-widest font-semibold">
-                      Day {day} · {DAY_DATES[day - 1]} · sample
-                    </div>
-                    <div className="text-sm font-semibold mt-1">{DAY_THEMES[day - 1]}</div>
-                  </div>
-                  <div className="text-xs text-gray-700">{text.length} chars</div>
-                </div>
-                <textarea
-                  value={text}
-                  onChange={(e) => setMessage(day, e.target.value)}
-                  className="w-full p-3 border rounded font-serif text-base leading-relaxed bg-gray-50 focus:bg-white focus:border-rose-400"
-                  rows={4}
-                />
-                {totalMediaDays.includes(day) ? (
-                  <MediaUploader
-                    day={day}
-                    current={media.filter((m) => m.day === day)}
-                    onAdd={(item) => setMedia((prev) => [...prev, item])}
-                    onRemove={(idx) =>
-                      setMedia((prev) => {
-                        const dayItems = prev.filter((m) => m.day === day);
-                        const target = dayItems[idx];
-                        return prev.filter((m) => m !== target);
-                      })
-                    }
-                  />
-                ) : null}
-              </div>
-            );
-          })}
+                Try again
+              </button>
+            </section>
+          ) : null}
 
-          {/* Locked Days 3-7 */}
-          <div className="pt-4 pb-2">
-            <div className="text-center text-xs uppercase tracking-widest text-gray-800 mb-3">
-              🔒 The other 5 unlock after you pay
-            </div>
-          </div>
-
-          {([3, 4, 5, 6, 7] as const).map((day) => {
-            const isMediaDay = totalMediaDays.includes(day);
-            return (
-              <div
-                key={day}
-                className="bg-white/60 rounded-2xl border border-gray-200 p-5 relative overflow-hidden"
-              >
-                <div className="flex justify-between items-baseline">
-                  <div>
-                    <div className="text-xs text-gray-800 uppercase tracking-wide">
-                      Day {day} · {DAY_DATES[day - 1]}
-                      {day === 7 ? ' · Mother’s Day' : ''}
-                    </div>
-                    <div className="text-sm font-semibold mt-1 text-gray-600">
-                      {DAY_THEMES[day - 1]}
-                    </div>
-                  </div>
-                  <div className="text-gray-700">🔒</div>
-                </div>
-                <p
-                  className="font-serif text-base leading-relaxed text-gray-600 mt-3 select-none"
-                  style={{ filter: 'blur(4px)', userSelect: 'none' }}
-                  aria-hidden
+          {messages ? (
+            <section className="space-y-6 mb-8" aria-label="Your three messages">
+              {LABELS.map(({ key, label, sub }) => (
+                <article
+                  key={key}
+                  className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow duration-200"
                 >
-                  Day {day} is written and waiting. Same voice as Day 1 and Day 2 —
-                  AI pulled from the rest of your answers. Unlocks the moment you pay.
-                </p>
-                {isMediaDay ? (
-                  <p className="text-xs text-rose-700 mt-3 italic">
-                    📎 You picked this day for media — you&rsquo;ll upload after paying.
+                  <p className="text-base uppercase tracking-[0.15em] text-gray-700 font-semibold">
+                    {label.toUpperCase()} — {sub.toUpperCase()}
                   </p>
-                ) : null}
+                  <label htmlFor={`msg-${key}`} className="sr-only">
+                    {label} — edit message
+                  </label>
+                  <textarea
+                    id={`msg-${key}`}
+                    value={messages[key]}
+                    onChange={(e) =>
+                      setMessages((m) => (m ? { ...m, [key]: e.target.value } : m))
+                    }
+                    rows={5}
+                    className="mt-4 w-full font-serif text-lg md:text-xl leading-[1.6] text-gray-950 bg-gray-50 rounded-xl p-4 border-0 focus:bg-white focus:ring-1 focus:ring-rose-600 focus:outline-none resize-none"
+                  />
+                  <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
+                    <p className="text-xs text-gray-700">Tap to edit</p>
+                    <MessageActions
+                      text={messages[key]}
+                      ariaLabelSuffix={`for ${label}`}
+                      showCopy
+                    />
+                  </div>
+                </article>
+              ))}
+            </section>
+          ) : null}
+
+          {messages ? (
+            <section className="mb-12" aria-label="What happens next">
+              <p className="font-serif text-2xl text-gray-950 mb-3">
+                That&rsquo;s it. 3 messages, ready to send.
+              </p>
+              <p className="text-gray-800 leading-relaxed mb-1">
+                We&rsquo;ll email them to you on the 8th, 9th, and 10th.
+              </p>
+              <p className="text-gray-800 leading-relaxed mb-1">
+                You copy, you paste, you send to {contact.mom_nickname || contact.mom_name || 'mom'}.
+              </p>
+              <p className="text-gray-800 leading-relaxed">Takes 30 seconds each morning.</p>
+            </section>
+          ) : null}
+
+          {messages ? (
+            <section className="border-t border-gray-100 pt-12 mb-12" aria-label="Make it yours">
+              <p className="text-sm text-gray-700 mb-5">
+                Use as much or as little as you want. Just want the 3 messages? Great. Skip the photos.
+                Either way, your mom gets a forever page she can keep.
+              </p>
+              <PhotoSection
+                open={photosOpen}
+                setOpen={setPhotosOpen}
+                media={media}
+                setMedia={setMedia}
+              />
+              <div className="mt-4">
+                <VoiceNoteSection
+                  audioUrl={personalAudioUrl}
+                  note={personalNote}
+                  songUrl={songUrl}
+                  setAudioUrl={setPersonalAudioUrl}
+                  setNote={setPersonalNote}
+                  setSongUrl={setSongUrl}
+                />
               </div>
-            );
-          })}
+              <div className="mt-4">
+                <CustomizeSection
+                  theme={theme}
+                  headline={customHeadline}
+                  signoff={customSignoff}
+                  momNickname={contact.mom_nickname}
+                  momName={contact.mom_name}
+                  userName={contact.user_name}
+                  setTheme={setTheme}
+                  setHeadline={setCustomHeadline}
+                  setSignoff={setCustomSignoff}
+                />
+              </div>
+            </section>
+          ) : null}
+
+          {messages ? (
+            <section className="border-t border-gray-100 pt-12 mb-12" aria-label="Where to send">
+              <h2 className="font-serif text-2xl md:text-3xl text-gray-950 mb-6">Where should we email you?</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <Field
+                  id="user_email"
+                  label="Your email *"
+                  value={contact.user_email}
+                  onChange={(v) => setContact((c) => ({ ...c, user_email: v }))}
+                  type="email"
+                  required
+                />
+                <Field
+                  id="user_name"
+                  label="Your name (optional)"
+                  value={contact.user_name}
+                  onChange={(v) => setContact((c) => ({ ...c, user_name: v }))}
+                />
+                <Field
+                  id="delivery_time"
+                  label="Delivery time"
+                  value={contact.delivery_time}
+                  onChange={(v) => setContact((c) => ({ ...c, delivery_time: v }))}
+                  type="time"
+                />
+              </div>
+              <p className="mt-4 text-xs text-gray-700">
+                Timezone detected: <strong className="text-gray-700">{contact.delivery_timezone}</strong>. Emails go out at
+                that time on May 8th, 9th, and 10th.
+              </p>
+            </section>
+          ) : null}
+
+          {messages ? (
+            <section className="border-t border-gray-100 pt-12 pb-12" aria-label="Get your messages">
+              <div className="text-center mb-10">
+                <p className="font-serif text-2xl md:text-3xl text-gray-950 mb-3">
+                  These are yours. It&rsquo;s free.
+                </p>
+                <p className="text-gray-800 leading-relaxed max-w-xl mx-auto">
+                  Hit the button. We&rsquo;ll email each message to you on the right morning.
+                  You copy and text {contact.mom_nickname || contact.mom_name || 'mom'}. Done in 30 seconds a day.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={submit}
+                disabled={!isReady || submitting}
+                className="w-full min-h-[56px] bg-rose-600 text-white px-8 py-4 rounded-full text-base md:text-lg font-medium shadow-lg hover:shadow-xl hover:bg-rose-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg focus:outline-2 focus:outline-rose-500 focus:outline-offset-2"
+              >
+                {submitting ? 'Setting up…' : 'Get My Messages →'}
+              </button>
+              <p className="mt-3 text-xs text-gray-700 text-center">
+                No payment. No sign-up. We just need an email so we can send the messages to you.
+              </p>
+              {submitError ? (
+                <p role="alert" className="mt-4 text-sm text-red-700 text-center">
+                  {submitError}
+                </p>
+              ) : null}
+            </section>
+          ) : null}
+
+          {/* Tip jar — whisper, share-only (they're about to get their messages) */}
+          {messages ? <TipJar variant="whisper" showContribute={false} /> : null}
         </div>
+      </main>
+    </>
+  );
+}
 
-        {data.tier === 3 ? (
-          <ForeverSetup data={foreverData} setData={setForeverData} />
-        ) : null}
-
-        <SaveMyWorkBanner data={data} messages={messages} media={media} foreverData={foreverData} />
-
-        <div className="bg-rose-50 border border-rose-200 rounded-lg p-4 mb-4 text-sm text-rose-900">
-          <p className="font-semibold mb-2">After you pay:</p>
-          <ul className="space-y-1 text-xs">
-            <li>• We email <strong>YOU</strong> daily May 4th–10th at {data.contact.delivery_time || '8:00'}</li>
-            <li>• You copy the message</li>
-            <li>• You text or email it to your mom — your choice</li>
-            <li>• Takes ~30 seconds per day</li>
-          </ul>
-        </div>
-
-        <div className="bg-white rounded-2xl border-2 border-rose-500 p-6 mb-6 shadow-md">
-          <div className="flex justify-between items-baseline mb-2">
-            <div>
-              <div className="text-sm text-gray-700 font-semibold">Like them? Unlock the other 5.</div>
-              <div className="text-xs text-gray-800">Edit until May 3rd. Refunds if it sucks.</div>
-            </div>
-            <div className="text-3xl font-bold">${tierAmount}</div>
-          </div>
-          {error ? <p className="text-sm text-red-600 mb-3">{error}</p> : null}
-          <button
-            onClick={checkout}
-            disabled={submitting}
-            className="w-full bg-rose-500 text-white py-4 rounded-xl text-lg font-semibold hover:bg-rose-600 disabled:bg-gray-300 mt-4 shadow-sm"
-          >
-            {submitting ? 'Loading…' : `Unlock all 7 — Pay $${tierAmount} →`}
-          </button>
-          <button
-            onClick={() => router.push(`/builder?tier=${data.tier}`)}
-            className="w-full mt-2 text-sm text-gray-600 underline"
-          >
-            ← Edit Question Answers
-          </button>
-        </div>
-
-        <NextLine text="confirmation email, then nothing until May 4th at 8am" />
-      </div>
+function Field({
+  id,
+  label,
+  value,
+  onChange,
+  type = 'text',
+  required = false,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  required?: boolean;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-2">
+        {label}
+      </label>
+      <input
+        id={id}
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        className="w-full border border-gray-200 rounded-xl p-3 text-base bg-white focus:border-rose-600 focus:ring-1 focus:ring-rose-600 focus:outline-none"
+      />
     </div>
   );
 }
 
-function SaveMyWorkBanner(props: {
-  data: BuilderData;
-  messages: Messages | null;
+function PhotoSection({
+  open,
+  setOpen,
+  media,
+  setMedia,
+}: {
+  open: boolean;
+  setOpen: (b: boolean) => void;
   media: MediaItem[];
-  foreverData: ForeverData;
+  setMedia: React.Dispatch<React.SetStateAction<MediaItem[]>>;
 }) {
-  const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState(props.data.contact.user_email || '');
-  const [submitting, setSubmitting] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const photos = media.filter((m) => m.type === 'photo');
+  const canAdd = photos.length < 2;
 
-  async function send() {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('Need a real email to send the link to');
-      return;
-    }
-    setSubmitting(true);
+  async function onFile(rawFile: File) {
+    if (!canAdd) return;
+    setUploading(true);
     setError(null);
     try {
-      const r = await fetch('/api/save-progress', {
+      const file = await maybeConvertHeic(rawFile);
+      const presign = await fetch('/api/upload-presigned', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          tier: props.data.tier,
-          contact: props.data.contact,
-          answers: props.data.answers,
-          extra_reminders: !!props.data.extraReminders,
-          wantsMedia: props.data.wantsMedia,
-          mediaDays: props.data.mediaDays,
-          messages: props.messages || {},
-          media: props.media,
-          forever_data: props.foreverData,
-        }),
+        body: JSON.stringify({ contentType: file.type, day: 0 }),
       });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error || 'send failed');
-      setSent(true);
+      const presignData = await presign.json();
+      if (!presign.ok) throw new Error(presignData.error || 'presign failed');
+      const putRes = await fetch(presignData.uploadUrl, {
+        method: 'PUT',
+        headers: { 'content-type': file.type },
+        body: file,
+      });
+      if (!putRes.ok) throw new Error('upload failed');
+      setMedia((m) => [...m, { day: 0, type: 'photo', url: presignData.publicUrl }]);
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setSubmitting(false);
+      setUploading(false);
     }
   }
 
-  if (sent) {
-    return (
-      <div className="bg-rose-50 border-2 border-rose-300 rounded-2xl p-5 mb-6 text-center">
-        <p className="font-serif text-xl text-gray-900 mb-1">Check your inbox.</p>
-        <p className="text-sm text-gray-700">
-          Your workspace link just landed at <strong>{email}</strong>. Open it from anywhere — phone, laptop, your work computer at lunch.
-        </p>
-      </div>
-    );
+  // Lazy-loads heic2any only when an HEIC file is detected. Lets non-HEIC
+  // uploads stay on the fast path with no extra bundle weight.
+  async function maybeConvertHeic(file: File): Promise<File> {
+    const isHeic =
+      /image\/(heic|heif)/i.test(file.type) || /\.(heic|heif)$/i.test(file.name);
+    if (!isHeic) return file;
+    const mod = await import('heic2any');
+    const heic2any = (mod as { default: (opts: { blob: Blob; toType?: string; quality?: number }) => Promise<Blob | Blob[]> }).default;
+    const result = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 });
+    const blob = Array.isArray(result) ? result[0] : result;
+    const newName = file.name.replace(/\.(heic|heif)$/i, '.jpg');
+    return new File([blob], newName.endsWith('.jpg') ? newName : newName + '.jpg', {
+      type: 'image/jpeg',
+    });
   }
 
   return (
-    <div className="bg-rose-50/70 border border-rose-200 rounded-2xl p-5 mb-6">
-      <div className="flex justify-between items-baseline mb-2">
-        <p className="font-serif text-lg text-gray-900">
-          I&rsquo;m not crying. You&rsquo;re crying.
-        </p>
-        {!open ? (
-          <button onClick={() => setOpen(true)} className="text-xs underline text-rose-700">
-            email me my workspace →
-          </button>
-        ) : null}
-      </div>
-      <p className="text-sm text-gray-700 mb-3">
-        Want to come back later to add photos, swap a video in, or bump up to a bigger package?
-        Drop your email and we&rsquo;ll send you the link to your workspace. It lives forever.
-        Open it from any device.
-      </p>
+    <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-controls="photos-panel"
+        className="w-full flex items-center justify-between p-6 md:p-8 text-left focus:outline-2 focus:outline-rose-500 focus:outline-offset-2 rounded-2xl"
+      >
+        <span className="font-medium text-gray-950">
+          {open ? '▾' : '▸'} Add 2 photos (optional)
+        </span>
+        <span className="text-xs text-gray-700">
+          {photos.length}/2 added · +2 min
+        </span>
+      </button>
       {open ? (
-        <div className="space-y-2 mt-3">
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="w-full p-3 border-2 border-gray-300 rounded-lg bg-white text-base"
-          />
-          <button
-            onClick={send}
-            disabled={submitting}
-            className="w-full bg-rose-500 text-white py-3 rounded-xl font-semibold hover:bg-rose-600 disabled:bg-gray-300"
-          >
-            {submitting ? 'Sending…' : 'Send me the link →'}
-          </button>
-          {error ? <p className="text-xs text-red-600">{error}</p> : null}
-          <p className="text-xs text-gray-800 italic">
-            We won&rsquo;t spam you. One email with one link. That&rsquo;s it.
+        <div id="photos-panel" className="px-6 md:px-8 pb-6 md:pb-8">
+          <p className="text-sm text-gray-700 mb-4 leading-relaxed">
+            Pick up your phone. Open Photos. Search &ldquo;mom.&rdquo; Pick 2 you love. Upload them
+            here. They show up on her forever page.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            {photos.map((p, i) => (
+              <figure
+                key={`${p.url}-${i}`}
+                className="relative bg-gray-50 rounded-xl overflow-hidden aspect-square"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={p.url}
+                  alt={`Your uploaded photo ${i + 1} of you and your mom`}
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => setMedia((m) => m.filter((x) => x.url !== p.url))}
+                  className="absolute top-2 right-2 bg-white/90 rounded-full px-2 py-1 text-xs font-semibold focus:outline-2 focus:outline-rose-500 focus:outline-offset-2"
+                  aria-label={`Remove photo ${i + 1}`}
+                >
+                  Remove
+                </button>
+              </figure>
+            ))}
+            {canAdd ? (
+              <label
+                className="aspect-square flex items-center justify-center border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-rose-600 transition-colors focus-within:outline-2 focus-within:outline-rose-500 focus-within:outline-offset-2"
+              >
+                <input
+                  type="file"
+                  accept="image/*,.heic,.heif"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) onFile(f);
+                    e.target.value = '';
+                  }}
+                  disabled={uploading}
+                />
+                <span className="text-sm font-medium text-rose-600">
+                  {uploading ? 'Uploading…' : '+ Add photo'}
+                </span>
+              </label>
+            ) : null}
+          </div>
+          {error ? (
+            <p role="alert" className="mt-2 text-sm text-red-700">
+              {error}
+            </p>
+          ) : null}
+          <p className="hidden md:block mt-3 text-xs text-gray-700">
+            iPhone photos not working? Open the photo in Preview → File → Export → save as JPEG.
           </p>
         </div>
       ) : null}
     </div>
   );
-}
-
-function ForeverSetup(props: {
-  data: ForeverData;
-  setData: (d: ForeverData) => void;
-}) {
-  const [showNote, setShowNote] = useState<boolean>(props.data.long_note.length > 0);
-  const [showVideo, setShowVideo] = useState<boolean>(props.data.video_url.length > 0);
-  const [uploadingVideo, setUploadingVideo] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const noteLen = props.data.long_note.length;
-
-  async function handleVideo(file: File) {
-    if (file.size > 200 * 1024 * 1024) {
-      setUploadError('Video too big — max ~200 MB');
-      return;
-    }
-    setUploadingVideo(true);
-    setUploadError(null);
-    try {
-      const r = await fetch('/api/upload-presigned', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ day: 0, contentType: file.type, filename: file.name }),
-      });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error || 'upload prepare failed');
-      const put = await fetch(j.uploadUrl, {
-        method: 'PUT',
-        headers: { 'content-type': file.type },
-        body: file,
-      });
-      if (!put.ok) throw new Error(`upload failed (${put.status})`);
-      props.setData({ ...props.data, video_url: j.publicUrl });
-    } catch (e) {
-      setUploadError((e as Error).message);
-    } finally {
-      setUploadingVideo(false);
-    }
-  }
-
-  return (
-    <div className="bg-white rounded-2xl border-2 border-rose-200 p-5 md:p-6 mb-6">
-      <h2 className="font-serif text-2xl mb-2 text-gray-900">Your Forever Page</h2>
-      <p className="text-gray-600 text-sm mb-6">
-        After May 4th, mom gets a private webpage with all 7 messages, your photos,
-        an AI-written letter, and your video. Two optional extras to make it hers:
-      </p>
-
-      <div className="space-y-5">
-        <div>
-          <div className="flex justify-between items-baseline mb-2">
-            <div className="text-sm font-semibold">📝 A longer note (optional)</div>
-            {!showNote ? (
-              <button onClick={() => setShowNote(true)} className="text-xs underline text-rose-700">
-                add a note →
-              </button>
-            ) : (
-              <span className={`text-xs ${noteLen > 500 ? 'text-red-600' : 'text-gray-800'}`}>
-                {noteLen}/500
-              </span>
-            )}
-          </div>
-          {showNote ? (
-            <>
-              <textarea
-                value={props.data.long_note}
-                onChange={(e) => props.setData({ ...props.data, long_note: e.target.value.slice(0, 500) })}
-                placeholder="Anything you want her to read in your own words. We'll weave it into the AI letter. Skip and AI writes it all."
-                rows={4}
-                className="w-full p-3 border rounded-xl font-serif text-base bg-gray-50 focus:bg-white focus:border-rose-400"
-              />
-              <button
-                onClick={() => { props.setData({ ...props.data, long_note: '' }); setShowNote(false); }}
-                className="text-xs underline text-gray-800 mt-1"
-              >
-                skip — let AI write the whole letter
-              </button>
-            </>
-          ) : (
-            <p className="text-xs text-gray-800 italic">
-              Skip if you want AI to write it all. Adding a note makes it more &ldquo;you.&rdquo;
-            </p>
-          )}
-        </div>
-
-        <hr />
-
-        <div>
-          <div className="flex justify-between items-baseline mb-2">
-            <div className="text-sm font-semibold">🎥 A video message (optional, up to 2 minutes)</div>
-            {!showVideo ? (
-              <button onClick={() => setShowVideo(true)} className="text-xs underline text-rose-700">
-                add a video →
-              </button>
-            ) : null}
-          </div>
-          {showVideo ? (
-            props.data.video_url ? (
-              <div className="bg-gray-50 rounded-lg p-3 text-sm flex items-center gap-3">
-                <span className="text-green-700">✓ video uploaded</span>
-                <span className="text-gray-800 truncate flex-1">{props.data.video_url}</span>
-                <button
-                  onClick={() => props.setData({ ...props.data, video_url: '' })}
-                  className="text-xs text-red-600 underline"
-                >
-                  remove
-                </button>
-              </div>
-            ) : (
-              <>
-                <label
-                  htmlFor="forever-video"
-                  className="block w-full bg-rose-500 text-white text-center py-4 rounded-xl font-semibold text-base cursor-pointer hover:bg-rose-600 transition shadow-sm"
-                >
-                  {uploadingVideo ? 'Uploading…' : 'Pick a video →'}
-                </label>
-                <input
-                  id="forever-video"
-                  type="file"
-                  accept="video/mp4,video/quicktime"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleVideo(f);
-                  }}
-                  className="sr-only"
-                />
-                <p className="text-xs text-gray-800 mt-2">
-                  Record on your phone. Lands at the bottom of her page. MP4/MOV, ~200 MB max.
-                </p>
-                {uploadError ? <p className="text-xs text-red-600 mt-1">{uploadError}</p> : null}
-                <button
-                  onClick={() => { props.setData({ ...props.data, video_url: '' }); setShowVideo(false); }}
-                  className="text-xs underline text-gray-800 mt-2"
-                >
-                  skip — page works fine without one
-                </button>
-              </>
-            )
-          ) : (
-            <p className="text-xs text-gray-800 italic">
-              Skip if you don&rsquo;t want to be on camera. The page is still beautiful.
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MediaUploader(props: {
-  day: number;
-  current: MediaItem[];
-  onAdd: (m: MediaItem) => void;
-  onRemove: (idx: number) => void;
-}) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [pickedType, setPickedType] = useState<'photo' | 'video' | 'audio' | 'youtube' | null>(null);
-  const [youtubeUrl, setYoutubeUrl] = useState('');
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-
-  async function handleFile(file: File) {
-    if (!pickedType || pickedType === 'youtube') return;
-    setUploading(true);
-    setUploadError(null);
-    try {
-      const r = await fetch('/api/upload-presigned', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ day: props.day, contentType: file.type, filename: file.name }),
-      });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error || 'upload prepare failed');
-      const put = await fetch(j.uploadUrl, {
-        method: 'PUT',
-        headers: { 'content-type': file.type },
-        body: file,
-      });
-      if (!put.ok) throw new Error(`upload failed (${put.status})`);
-      props.onAdd({ day: props.day, type: pickedType, url: j.publicUrl });
-      setPickedType(null);
-    } catch (e) {
-      setUploadError((e as Error).message);
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  }
-
-  return (
-    <div className="mt-4 pt-4 border-t">
-      <div className="text-xs uppercase tracking-wide text-gray-800 mb-2">Media for this day</div>
-      {props.current.length ? (
-        <div className="space-y-2 mb-3">
-          {props.current.map((m, idx) => (
-            <div
-              key={`${m.url}-${idx}`}
-              className="flex items-center gap-3 p-2 bg-gray-50 rounded text-sm"
-            >
-              <span className="capitalize text-gray-700">{m.type}</span>
-              <span className="text-gray-800 truncate flex-1">{m.url}</span>
-              <button onClick={() => props.onRemove(idx)} className="text-red-600 text-xs">remove</button>
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      {pickedType === null ? (
-        <div className="flex flex-wrap gap-2">
-          <SmallBtn onClick={() => setPickedType('photo')}>📸 Photo</SmallBtn>
-          <SmallBtn onClick={() => setPickedType('video')}>🎥 Video</SmallBtn>
-          <SmallBtn onClick={() => setPickedType('audio')}>🎙️ Audio</SmallBtn>
-          <SmallBtn onClick={() => setPickedType('youtube')}>▶ YouTube link</SmallBtn>
-        </div>
-      ) : pickedType === 'youtube' ? (
-        <div className="space-y-2">
-          <input
-            value={youtubeUrl}
-            onChange={(e) => setYoutubeUrl(e.target.value)}
-            placeholder="https://youtube.com/watch?v=..."
-            className="w-full p-3 border rounded text-base"
-          />
-          <div className="flex gap-2">
-            <SmallBtn
-              onClick={() => {
-                if (!/youtu/.test(youtubeUrl)) {
-                  setUploadError('Not a YouTube URL');
-                  return;
-                }
-                props.onAdd({ day: props.day, type: 'youtube', url: youtubeUrl });
-                setYoutubeUrl('');
-                setPickedType(null);
-              }}
-            >
-              Add
-            </SmallBtn>
-            <SmallBtn onClick={() => setPickedType(null)}>cancel</SmallBtn>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <label
-            htmlFor={`file-${props.day}`}
-            className="block w-full bg-rose-500 text-white text-center py-4 rounded-xl font-semibold text-base cursor-pointer hover:bg-rose-600 transition shadow-sm"
-          >
-            {uploading ? 'Uploading…' : `Pick a ${pickedType} →`}
-          </label>
-          <input
-            id={`file-${props.day}`}
-            ref={fileInputRef}
-            type="file"
-            accept={accept(pickedType)}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) handleFile(f);
-            }}
-            className="sr-only"
-          />
-          <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-700 space-y-1.5">
-            <div><strong>📱 On phone:</strong> Tap the button. Pick from Camera Roll / Photos.</div>
-            <div><strong>💻 On Mac:</strong> Click the button. Select from Photos app or Finder.</div>
-            <div><strong>🖥️ On PC:</strong> Click the button. Pick from your Pictures folder.</div>
-            <div className="pt-1 italic text-gray-600">
-              Can&rsquo;t find a {pickedType}? Text someone to send you a few, save them, then come back.
-            </div>
-          </div>
-          <div className="text-xs text-gray-800">
-            {pickedType === 'photo'
-              ? 'JPG / PNG / GIF up to 10 MB'
-              : pickedType === 'video'
-                ? 'MP4 / MOV up to 100 MB'
-                : 'MP3 / M4A up to 10 MB'}
-          </div>
-          {pickedType === 'video' ? (
-            <p className="text-xs text-gray-600 italic">
-              💡 Tip: if you&rsquo;re recording multiple days, change your shirt between recordings. She&rsquo;ll never know.
-            </p>
-          ) : null}
-          {uploading ? <div className="text-sm text-rose-700 font-semibold">Uploading… don&rsquo;t close the tab.</div> : null}
-          <button
-            onClick={() => setPickedType(null)}
-            className="text-xs text-gray-600 underline"
-          >
-            cancel — pick a different type
-          </button>
-        </div>
-      )}
-      {uploadError ? <p className="text-xs text-red-600 mt-2">{uploadError}</p> : null}
-    </div>
-  );
-}
-
-// HuntSetup removed — Tier 3 is now the Forever Page (see ForeverSetup above).
-
-function SmallBtn(props: { onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={props.onClick}
-      className="px-3 py-2 text-sm border rounded hover:bg-gray-50 bg-white"
-    >
-      {props.children}
-    </button>
-  );
-}
-
-function accept(t: 'photo' | 'video' | 'audio'): string {
-  if (t === 'photo') return 'image/jpeg,image/png,image/gif,image/webp';
-  if (t === 'video') return 'video/mp4,video/quicktime';
-  return 'audio/mpeg,audio/mp4,audio/x-m4a,audio/wav';
 }

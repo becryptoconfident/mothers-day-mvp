@@ -2,14 +2,17 @@
 // Generates presigned PUT URLs so the browser uploads directly without
 // proxying through Next.
 
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
 const ACCESS_KEY = process.env.R2_ACCESS_KEY_ID;
 const SECRET_KEY = process.env.R2_SECRET_ACCESS_KEY;
 const BUCKET = process.env.R2_BUCKET || 'mothers-day-media';
-const PUBLIC_URL = process.env.R2_PUBLIC_URL?.replace(/\/$/, '') || '';
+// Note: we do NOT use R2_PUBLIC_URL for browser-facing image URLs — that
+// variable typically points at the S3 API endpoint which requires auth.
+// Instead we proxy via /api/media/[...path] using server-side credentials.
+const SITE_URL = process.env.NEXT_PUBLIC_URL?.replace(/\/$/, '') || '';
 
 let _client: S3Client | null = null;
 
@@ -28,7 +31,13 @@ function client(): S3Client {
 }
 
 export function r2Configured(): boolean {
-  return Boolean(ACCOUNT_ID && ACCESS_KEY && SECRET_KEY && PUBLIC_URL);
+  return Boolean(ACCOUNT_ID && ACCESS_KEY && SECRET_KEY);
+}
+
+/** Server-side fetch of a stored object. Used by the /api/media proxy route. */
+export async function getR2Object(key: string) {
+  if (!r2Configured()) throw new Error('R2 not configured');
+  return client().send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
 }
 
 const CONTENT_TYPE_LIMITS: Record<string, number> = {
@@ -43,14 +52,22 @@ const CONTENT_TYPE_LIMITS: Record<string, number> = {
   'audio/m4a': 10 * 1024 * 1024,
   'audio/x-m4a': 10 * 1024 * 1024,
   'audio/wav': 10 * 1024 * 1024,
+  'audio/webm': 10 * 1024 * 1024,
+  'audio/ogg': 10 * 1024 * 1024,
 };
 
+// Browsers (especially Chrome's MediaRecorder) often send content types with
+// codec params, e.g. "audio/webm;codecs=opus". Strip those before checking.
+function baseType(ct: string): string {
+  return (ct || '').split(';')[0].trim().toLowerCase();
+}
+
 export function isAllowedContentType(ct: string): boolean {
-  return ct in CONTENT_TYPE_LIMITS;
+  return baseType(ct) in CONTENT_TYPE_LIMITS;
 }
 
 export function maxBytesForType(ct: string): number {
-  return CONTENT_TYPE_LIMITS[ct] || 0;
+  return CONTENT_TYPE_LIMITS[baseType(ct)] || 0;
 }
 
 /** Returns presigned PUT URL + the eventual public URL. Browser uploads to PUT URL. */
@@ -72,15 +89,19 @@ export async function presignUpload(args: {
     args.day === 0
       ? `forever/${args.orderId}/video-${Date.now()}${ext}`
       : `orders/${args.orderId}/day-${args.day}-${Date.now()}${ext}`;
+  // Strip codec params from content type before signing — keeps the
+  // presigned signature stable regardless of how the client passes it.
   const cmd = new PutObjectCommand({
     Bucket: BUCKET,
     Key: key,
-    ContentType: args.contentType,
+    ContentType: baseType(args.contentType),
   });
   const uploadUrl = await getSignedUrl(client(), cmd, {
     expiresIn: args.expiresInSeconds ?? 600,
   });
-  const publicUrl = `${PUBLIC_URL}/${key}`;
+  // Browser-facing URL points at our /api/media proxy. SITE_URL is absolute
+  // (needed for emails), but the proxy works the same locally and in prod.
+  const publicUrl = `${SITE_URL}/api/media/${key}`;
   return { uploadUrl, publicUrl, key };
 }
 
@@ -94,14 +115,17 @@ function guessExt(contentType: string, filename?: string): string {
     const m = filename.match(/\.[a-zA-Z0-9]{1,5}$/);
     if (m) return m[0].toLowerCase();
   }
-  if (contentType === 'image/jpeg') return '.jpg';
-  if (contentType === 'image/png') return '.png';
-  if (contentType === 'image/gif') return '.gif';
-  if (contentType === 'image/webp') return '.webp';
-  if (contentType === 'video/mp4') return '.mp4';
-  if (contentType === 'video/quicktime') return '.mov';
-  if (contentType === 'audio/mpeg') return '.mp3';
-  if (contentType === 'audio/mp4' || contentType.endsWith('m4a')) return '.m4a';
-  if (contentType === 'audio/wav') return '.wav';
+  const base = baseType(contentType);
+  if (base === 'image/jpeg') return '.jpg';
+  if (base === 'image/png') return '.png';
+  if (base === 'image/gif') return '.gif';
+  if (base === 'image/webp') return '.webp';
+  if (base === 'video/mp4') return '.mp4';
+  if (base === 'video/quicktime') return '.mov';
+  if (base === 'audio/mpeg') return '.mp3';
+  if (base === 'audio/mp4' || base.endsWith('m4a')) return '.m4a';
+  if (base === 'audio/wav') return '.wav';
+  if (base === 'audio/webm') return '.webm';
+  if (base === 'audio/ogg') return '.ogg';
   return '';
 }

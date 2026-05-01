@@ -29,6 +29,11 @@ BEGIN
                  WHERE table_name='orders' AND column_name='forever_data') THEN
     ALTER TABLE orders ADD COLUMN forever_data JSONB DEFAULT '{}'::jsonb;
   END IF;
+  -- Output language for messages + forever letter. UI stays English; output is whatever mom prefers.
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name='orders' AND column_name='language') THEN
+    ALTER TABLE orders ADD COLUMN language TEXT DEFAULT 'English';
+  END IF;
 END $$;
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -144,3 +149,15 @@ CREATE TABLE IF NOT EXISTS error_logs (
 );
 CREATE INDEX IF NOT EXISTS error_logs_created_at_idx ON error_logs(created_at);
 ALTER TABLE error_logs ENABLE ROW LEVEL SECURITY;
+
+-- Reminder-misfire hotfix: claim-then-send-then-confirm idempotency table.
+-- claimed_at = row inserted before Resend handoff. sent_at = updated after Resend accepts.
+-- PK on (order_id, email_type) prevents duplicate sends. No reaper — orphan claims stick.
+CREATE TABLE IF NOT EXISTS sent_emails (
+  order_id TEXT NOT NULL,
+  email_type TEXT NOT NULL,
+  claimed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  sent_at TIMESTAMPTZ,
+  PRIMARY KEY (order_id, email_type)
+);
+ALTER TABLE sent_emails ENABLE ROW LEVEL SECURITY;

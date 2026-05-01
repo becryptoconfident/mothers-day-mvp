@@ -9,21 +9,21 @@ export function StepBreadcrumb(props: {
   next?: string;
 }) {
   return (
-    <div className="border-y border-gray-200 py-4 mb-6">
+    <div className="py-4 mb-8">
       {props.done ? (
-        <div className="text-sm text-green-700 font-medium">✓ {props.done}</div>
+        <div className="text-xs uppercase tracking-[0.2em] text-gray-700">{props.done}</div>
       ) : null}
-      <div className="text-base text-gray-900 font-semibold mt-1">→ {props.current}</div>
+      <div className="text-sm text-gray-950 font-medium mt-1">{props.current}</div>
       {typeof props.progress === 'number' ? (
-        <div className="w-full bg-gray-200 rounded-full h-1.5 my-2.5">
+        <div className="w-full bg-gray-100 rounded-full h-1 my-3">
           <div
-            className="bg-blue-600 h-1.5 rounded-full transition-all"
+            className="bg-rose-600 h-1 rounded-full transition-all duration-300"
             style={{ width: `${Math.min(100, Math.max(0, props.progress))}%` }}
           />
         </div>
       ) : null}
       {props.next ? (
-        <div className="text-xs text-gray-800 italic mt-1.5">Next: {props.next}</div>
+        <div className="text-xs text-gray-700 mt-1.5">Next: {props.next}</div>
       ) : null}
     </div>
   );
@@ -31,8 +31,8 @@ export function StepBreadcrumb(props: {
 
 export function NextLine({ text }: { text: string }) {
   return (
-    <div className="border-y border-gray-200 py-3 mt-6 text-center">
-      <span className="text-xs text-gray-800 italic">Next: {text}</span>
+    <div className="border-t border-gray-100 py-3 mt-6 text-center">
+      <span className="text-xs text-gray-700">Next: {text}</span>
     </div>
   );
 }

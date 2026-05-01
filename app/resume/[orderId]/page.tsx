@@ -67,26 +67,26 @@ export default function ResumePage(props: { params: Promise<{ orderId: string }>
         {status === 'loading' && (
           <>
             <h1 className="font-serif text-2xl mb-2 text-gray-900">Pulling up your workspace…</h1>
-            <p className="text-gray-600 text-sm">One sec.</p>
+            <p className="text-gray-900 text-sm">One sec.</p>
           </>
         )}
         {status === 'restored' && (
           <>
             <h1 className="font-serif text-2xl mb-2 text-gray-900">Welcome back.</h1>
-            <p className="text-gray-600 text-sm">Taking you to your messages…</p>
+            <p className="text-gray-900 text-sm">Taking you to your messages…</p>
           </>
         )}
         {status === 'paid' && (
           <>
             <h1 className="font-serif text-2xl mb-2 text-gray-900">You already paid for this one.</h1>
-            <p className="text-gray-600 text-sm">Sending you to the edit page…</p>
+            <p className="text-gray-900 text-sm">Sending you to the edit page…</p>
           </>
         )}
         {status === 'error' && (
           <>
             <h1 className="font-serif text-2xl mb-2 text-gray-900">Hmm.</h1>
-            <p className="text-gray-600 text-sm mb-4">{error}</p>
-            <a href="/" className="text-rose-700 underline">← back home</a>
+            <p className="text-gray-900 text-sm mb-4">{error}</p>
+            <a href="/" className="text-rose-700">← back home</a>
           </>
         )}
       </div>
