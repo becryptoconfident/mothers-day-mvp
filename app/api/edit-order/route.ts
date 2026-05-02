@@ -14,6 +14,7 @@ const EDITABLE_FIELDS = new Set([
   'delivery_time',
   'delivery_timezone',
   'language',
+  'delivery_mode',
 ]);
 
 export async function GET(req: Request) {
@@ -66,6 +67,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'nothing to update' }, { status: 400 });
     }
 
+    // If switching to direct-to-mom delivery, mom_email must be valid in the
+    // resulting state (either freshly patched or already on the row).
+    const merged = { ...existing, ...update } as Record<string, unknown>;
+    if (merged.delivery_mode === 'mom') {
+      const email = merged.mom_email;
+      if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return NextResponse.json(
+          { error: 'mom_email required for direct-to-mom delivery' },
+          { status: 400 },
+        );
+      }
+    }
+
     const { error: updateErr } = await supabaseAdmin
       .from('orders')
       .update(update)
@@ -84,7 +98,6 @@ export async function POST(req: Request) {
       'delivery_timezone' in update;
 
     if (reschedule) {
-      const merged = { ...existing, ...update };
       const oldIds = (existing.scheduled_email_ids || {}) as Record<string, string>;
 
       for (const id of Object.values(oldIds)) {
@@ -95,9 +108,14 @@ export async function POST(req: Request) {
         .from('sent_emails')
         .delete()
         .eq('order_id', orderId)
-        .in('email_type', ['message_day_1', 'message_day_2', 'message_day_3']);
+        .in('email_type', [
+          'message_day_1', 'message_day_2', 'message_day_3',
+          'mom_message_day_1', 'mom_message_day_2', 'mom_message_day_3',
+        ]);
 
-      const { scheduledIds } = await scheduleDailyEmails(merged);
+      const { scheduledIds } = await scheduleDailyEmails(
+        merged as unknown as Parameters<typeof scheduleDailyEmails>[0],
+      );
 
       await supabaseAdmin
         .from('orders')

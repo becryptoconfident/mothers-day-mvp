@@ -176,6 +176,7 @@ export default async function ForeverPage({
   const m1 = order.messages?.day_1 || '';
   const m2 = order.messages?.day_2 || '';
   const m3 = order.messages?.day_3 || '';
+  const messages = [m1, m2, m3].filter(Boolean);
   const pullQuote = extractPullQuote(letter);
 
   // Theme + customizations from forever_data, with sensible defaults.
@@ -185,6 +186,14 @@ export default async function ForeverPage({
   const headlineText = (fd.headline && fd.headline.trim()) || `Happy Mother's Day, ${headlineName}`;
   const signoffText =
     (fd.signoff && fd.signoff.trim()) || `With love${userName ? `, ${userName}` : ''}`;
+
+  // Split the letter into paragraphs once so we can inline photos.
+  const letterParas = letter.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+
+  // Voice/song/note presence — drives whether the top "from the sender" block renders.
+  const song = resolveSongEmbed(fd.song_url || '');
+  const hasSongLink = !!fd.song_url && !song;
+  const hasFromSender = !!fd.personal_audio_url || !!fd.song_url || !!fd.personal_note;
 
   return (
     <main
@@ -198,55 +207,163 @@ export default async function ForeverPage({
         ['--text' as string]: T.text,
       }}
     >
-      {/* Hero — collage poster, fits the first viewport */}
-      <section className="min-h-[100dvh] flex flex-col">
-        <header className="text-center px-6 pt-8 md:pt-12 pb-3 md:pb-4 flex-none">
-          <h1
-            className="font-serif leading-[1.05] tracking-tight"
-            style={{ fontSize: 'clamp(32px, 4.5vw, 56px)', color: T.text }}
-          >
-            {headlineText}
-          </h1>
-        </header>
+      {/* Page title */}
+      <header className="text-center px-6 pt-8 md:pt-12 pb-3 md:pb-4">
+        <h1
+          className="font-serif leading-[1.05] tracking-tight"
+          style={{ fontSize: 'clamp(32px, 4.5vw, 56px)', color: T.text }}
+        >
+          {headlineText}
+        </h1>
+      </header>
 
-        {/* Collage */}
-        <div className="flex-1 min-h-0 px-4 md:px-8 py-3 md:py-4 pb-8">
+      {/* Pull quote — small italic teaser line that frames the page */}
+      {pullQuote ? (
+        <div className="text-center px-6 pb-8 md:pb-10 max-w-2xl mx-auto" aria-label="From the letter">
+          <p
+            className="font-serif italic leading-[1.45]"
+            style={{ fontSize: 'clamp(14px, 1.4vw, 19px)', color: T.text, opacity: 0.85 }}
+          >
+            &ldquo;{pullQuote}&rdquo;
+          </p>
+        </div>
+      ) : null}
+
+      {/* From the sender — voice first, then song, then personal note */}
+      {hasFromSender ? (
+        <section className="px-6 pb-8 max-w-2xl mx-auto" aria-label="From the sender">
+          <div className="space-y-4">
+            {fd.personal_audio_url ? (
+              <figure className="bg-white rounded-2xl shadow-sm p-6">
+                <figcaption
+                  className="text-xs uppercase tracking-[0.2em] font-medium mb-3"
+                  style={{ color: T.accent }}
+                >
+                  A message from {userName || 'them'}
+                </figcaption>
+                {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                <audio
+                  controls
+                  src={fd.personal_audio_url}
+                  className="w-full"
+                  preload="metadata"
+                  aria-label={`Voice message from ${userName || 'the sender'}`}
+                />
+              </figure>
+            ) : null}
+
+            {song ? (
+              <div className="max-w-md mx-auto">
+                <p className="text-sm italic mb-2 text-center" style={{ color: T.text, opacity: 0.7 }}>
+                  <span aria-hidden="true">♫ </span>A song for you
+                </p>
+                <div className="rounded-xl overflow-hidden shadow-sm bg-white">
+                  <iframe
+                    title="A song for Mom"
+                    src={song.embedUrl}
+                    className={song.type === 'youtube' ? 'w-full aspect-video' : 'w-full h-[152px]'}
+                    loading="lazy"
+                    allow="encrypted-media; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              </div>
+            ) : hasSongLink ? (
+              <div className="max-w-md mx-auto text-center">
+                <p className="text-sm italic mb-2" style={{ color: T.text, opacity: 0.7 }}>
+                  <span aria-hidden="true">♫ </span>A song for you
+                </p>
+                <a
+                  href={fd.song_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium break-all"
+                  style={{ color: T.accent }}
+                >
+                  {fd.song_url}
+                </a>
+              </div>
+            ) : null}
+
+            {fd.personal_note ? (
+              <div className="rounded-2xl p-8" style={{ background: T.card }}>
+                <p
+                  className="text-xs uppercase tracking-[0.2em] font-medium mb-3"
+                  style={{ color: T.accent }}
+                >
+                  In their words
+                </p>
+                <p
+                  className="font-serif italic text-lg md:text-xl leading-relaxed whitespace-pre-line max-w-prose"
+                  style={{ color: T.text }}
+                >
+                  {fd.personal_note}
+                </p>
+              </div>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {/* The letter — paragraphs flow with photos inlined after p1 and p3 */}
+      <section className="px-6 py-12 md:py-16" aria-label="The letter">
+        <div className="rounded-2xl p-8 md:p-12 max-w-2xl mx-auto" style={{ background: T.card }}>
           <div
-            className="h-full grid gap-3 md:gap-4"
-            style={{
-              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-              gridTemplateRows: 'minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1fr)',
-            }}
+            className="font-serif text-xl leading-relaxed max-w-prose mx-auto"
+            style={{ color: T.text }}
           >
-            {/* Row 1: Photo 1 (1 col) + Message 1 (2 cols) */}
-            {photo1 ? <PhotoTile photo={photo1} index={1} /> : null}
-            <MessageTile text={m1} colSpan={photo1 ? 2 : 3} isFinale={false} />
-
-            {/* Row 2: Message 2 (2 cols) + Photo 2 (1 col) */}
-            <MessageTile text={m2} colSpan={photo2 ? 2 : 3} isFinale={false} />
-            {photo2 ? <PhotoTile photo={photo2} index={2} /> : null}
-
-            {/* Row 3: Message 3 — full width, the big one */}
-            <MessageTile text={m3} colSpan={3} isFinale />
-
-            {/* Row 4: Pull quote — full width */}
-            <div
-              className="col-span-3 rounded-2xl flex items-center justify-center px-6 md:px-10 py-4 md:py-5"
-              style={{ background: T.card }}
-              aria-label="From the letter"
-            >
-              <p
-                className="font-serif italic text-center leading-[1.45] max-w-3xl"
-                style={{ fontSize: 'clamp(14px, 1.4vw, 19px)', color: T.text, opacity: 0.85 }}
-              >
-                &ldquo;{pullQuote}&rdquo;
-              </p>
-            </div>
+            {letterParas.map((para, idx) => (
+              <div key={`para-block-${idx}`}>
+                <p className="whitespace-pre-line">{para}</p>
+                {idx === 0 && photo1 ? (
+                  <figure className="my-6 space-y-1.5" aria-label="Photo of mom">
+                    <div className="rounded-xl overflow-hidden shadow-sm bg-white">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={photo1.url}
+                        alt={photo1.caption || 'Photo of mom'}
+                        className="w-full h-auto"
+                      />
+                    </div>
+                    {photo1.caption ? (
+                      <figcaption
+                        className="text-xs text-center"
+                        style={{ color: T.text, opacity: 0.75 }}
+                      >
+                        {photo1.caption}
+                      </figcaption>
+                    ) : null}
+                  </figure>
+                ) : null}
+                {idx === 2 && photo2 ? (
+                  <figure className="my-6 space-y-1.5" aria-label="Photo of mom">
+                    <div className="rounded-xl overflow-hidden shadow-sm bg-white">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={photo2.url}
+                        alt={photo2.caption || 'Photo of mom'}
+                        className="w-full h-auto"
+                      />
+                    </div>
+                    {photo2.caption ? (
+                      <figcaption
+                        className="text-xs text-center"
+                        style={{ color: T.text, opacity: 0.75 }}
+                      >
+                        {photo2.caption}
+                      </figcaption>
+                    ) : null}
+                  </figure>
+                ) : null}
+                {/* Spacer between paragraphs (skipped after the last) */}
+                {idx < letterParas.length - 1 ? <div className="h-4" aria-hidden="true" /> : null}
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Edit-mode controls — only on /forever/{id}?edit=true */}
+      {/* Edit-mode controls — only on /forever/{id}?edit=true; lives below the letter */}
       {editMode ? (
         <ExtraMediaEditor
           orderId={order.id}
@@ -257,7 +374,8 @@ export default async function ForeverPage({
         />
       ) : null}
 
-      {/* Static extras gallery — visible to both views (and to mom) when present */}
+      {/* Static extras gallery — shows uploaded extras (separate source from the
+          inlined letter photos, so no double-render) */}
       {(fd.extra_media && fd.extra_media.length > 0) ? (
         <section className="px-6 pb-8 max-w-2xl mx-auto" aria-label="More photos">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -285,104 +403,9 @@ export default async function ForeverPage({
         </section>
       ) : null}
 
-      {/* Full letter — flows after the collage */}
-      <section className="px-6 py-16 md:py-24" aria-label="The letter">
-        <div className="rounded-2xl p-8 md:p-12 max-w-2xl mx-auto" style={{ background: T.card }}>
-          <div
-            className="font-serif text-xl leading-relaxed whitespace-pre-line max-w-prose mx-auto"
-            style={{ color: T.text }}
-          >
-            {letter}
-          </div>
-        </div>
-      </section>
-
-      {/* Song / audio / note — order: song, voice, written. Only renders blocks that are present. */}
-      {(() => {
-        const fd = order.forever_data || {};
-        const song = resolveSongEmbed(fd.song_url || '');
-        const hasSongLink = !!fd.song_url && !song;
-        const hasAnything = !!fd.song_url || !!fd.personal_audio_url || !!fd.personal_note;
-        if (!hasAnything) return null;
-        return (
-          <section className="px-6 pb-16 md:pb-24 max-w-2xl mx-auto" aria-label="From the sender">
-            <div className="space-y-4">
-              {song ? (
-                <div className="max-w-md mx-auto">
-                  <p className="text-sm italic mb-2 text-center" style={{ color: T.text, opacity: 0.7 }}>
-                    <span aria-hidden="true">♫ </span>A song for you
-                  </p>
-                  <div className="rounded-xl overflow-hidden shadow-sm bg-white">
-                    <iframe
-                      title="A song for Mom"
-                      src={song.embedUrl}
-                      className={song.type === 'youtube' ? 'w-full aspect-video' : 'w-full h-[152px]'}
-                      loading="lazy"
-                      allow="encrypted-media; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
-                </div>
-              ) : hasSongLink ? (
-                <div className="max-w-md mx-auto text-center">
-                  <p className="text-sm italic mb-2" style={{ color: T.text, opacity: 0.7 }}>
-                    <span aria-hidden="true">♫ </span>A song for you
-                  </p>
-                  <a
-                    href={fd.song_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium break-all"
-                    style={{ color: T.accent }}
-                  >
-                    {fd.song_url}
-                  </a>
-                </div>
-              ) : null}
-
-              {fd.personal_audio_url ? (
-                <figure className="bg-white rounded-2xl shadow-sm p-6">
-                  <figcaption
-                    className="text-xs uppercase tracking-[0.2em] font-medium mb-3"
-                    style={{ color: T.accent }}
-                  >
-                    A message from {userName || 'them'}
-                  </figcaption>
-                  {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                  <audio
-                    controls
-                    src={fd.personal_audio_url}
-                    className="w-full"
-                    preload="metadata"
-                    aria-label={`Voice message from ${userName || 'the sender'}`}
-                  />
-                </figure>
-              ) : null}
-
-              {fd.personal_note ? (
-                <div className="rounded-2xl p-8" style={{ background: T.card }}>
-                  <p
-                    className="text-xs uppercase tracking-[0.2em] font-medium mb-3"
-                    style={{ color: T.accent }}
-                  >
-                    In their words
-                  </p>
-                  <p
-                    className="font-serif italic text-lg md:text-xl leading-relaxed whitespace-pre-line max-w-prose"
-                    style={{ color: T.text }}
-                  >
-                    {fd.personal_note}
-                  </p>
-                </div>
-              ) : null}
-            </div>
-          </section>
-        );
-      })()}
-
-      {/* Mother's Day photo — last visual element before the sign-off, slightly bigger */}
+      {/* Mother's Day photo — last visual element before the sign-off */}
       {fd.mothers_day_photo ? (
-        <section className="px-6 pb-12 md:pb-16 max-w-3xl mx-auto" aria-label="Mother's Day photo">
+        <section className="px-6 pb-8 md:pb-12 max-w-3xl mx-auto" aria-label="Mother's Day photo">
           <figure className="space-y-3">
             <div className="rounded-2xl overflow-hidden shadow-md bg-white aspect-[4/3]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -420,6 +443,33 @@ export default async function ForeverPage({
         shareUrl={process.env.NEXT_PUBLIC_URL || ''}
       />
 
+      {/* The 3 messages mom received — at the bottom of the page */}
+      {messages.length > 0 ? (
+        <section className="px-6 py-12 md:py-16 max-w-2xl mx-auto" aria-label="The messages">
+          <p
+            className="text-xs uppercase tracking-[0.2em] mb-4 text-center"
+            style={{ color: T.accent, opacity: 0.85 }}
+          >
+            The messages
+          </p>
+          <div className="space-y-4">
+            {messages.map((msg, i) => (
+              <article
+                key={`msg-${i}`}
+                className="bg-white rounded-2xl shadow-sm p-6 md:p-8"
+              >
+                <p
+                  className="font-serif leading-relaxed whitespace-pre-line"
+                  style={{ color: T.text }}
+                >
+                  {msg}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {/* Whisper footer — quiet, last */}
       <footer className="text-center px-6 pb-12 md:pb-16">
         <p className="text-xs" style={{ color: T.text, opacity: 0.5 }}>
@@ -427,49 +477,5 @@ export default async function ForeverPage({
         </p>
       </footer>
     </main>
-  );
-}
-
-function PhotoTile({ photo, index }: { photo: MediaItem; index: number }) {
-  return (
-    <figure className="row-span-1 col-span-1 rounded-2xl overflow-hidden shadow-md bg-gray-50 min-h-0">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={photo.url}
-        alt={photo.caption || `Photo ${index} of mom`}
-        className="w-full h-full object-cover"
-      />
-    </figure>
-  );
-}
-
-function MessageTile({
-  text,
-  colSpan,
-  isFinale,
-}: {
-  text: string;
-  colSpan: 1 | 2 | 3;
-  isFinale: boolean;
-}) {
-  const colClass = colSpan === 3 ? 'col-span-3' : colSpan === 2 ? 'col-span-2' : 'col-span-1';
-  return (
-    <article
-      className={`row-span-1 ${colClass} bg-white rounded-2xl shadow-sm p-4 md:p-6 flex flex-col justify-center min-h-0 relative ${isFinale ? 'shadow-md' : ''}`}
-    >
-      {isFinale ? (
-        <div
-          className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl"
-          style={{ background: 'var(--accent)' }}
-          aria-hidden="true"
-        />
-      ) : null}
-      <p
-        className="font-serif leading-[1.45] whitespace-pre-line overflow-hidden"
-        style={{ fontSize: 'var(--card-text)', color: 'var(--text)' }}
-      >
-        {text}
-      </p>
-    </article>
   );
 }

@@ -34,6 +34,12 @@ BEGIN
                  WHERE table_name='orders' AND column_name='language') THEN
     ALTER TABLE orders ADD COLUMN language TEXT DEFAULT 'English';
   END IF;
+  -- Direct-to-mom email delivery option. 'self' = buyer relays via copy-paste, 'mom' = service emails mom directly with buyer bcc'd.
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name='orders' AND column_name='delivery_mode') THEN
+    ALTER TABLE orders ADD COLUMN delivery_mode TEXT DEFAULT 'self'
+      CHECK (delivery_mode IN ('self', 'mom'));
+  END IF;
 END $$;
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -58,6 +64,9 @@ CREATE TABLE IF NOT EXISTS orders (
 
   -- Optional 1pm gentle reminder (ADHD/neurodivergent opt-in)
   extra_reminders BOOLEAN DEFAULT FALSE,
+
+  -- Delivery mode: 'self' = buyer relays via copy-paste, 'mom' = service emails mom directly (buyer bcc'd)
+  delivery_mode TEXT NOT NULL DEFAULT 'self' CHECK (delivery_mode IN ('self', 'mom')),
 
   -- 5 question answers
   question_1 TEXT NOT NULL,

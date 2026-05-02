@@ -8,7 +8,7 @@ export default function SiteHeader() {
   const pathname = usePathname();
   if (pathname && pathname.startsWith('/forever')) return null;
   return (
-    <header className="bg-white">
+    <header className="bg-white -mb-10">
       <div className="max-w-5xl mx-auto px-6 py-5 flex items-center">
         <Link
           href="/"

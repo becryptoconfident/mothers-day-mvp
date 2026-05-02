@@ -9,6 +9,8 @@ type Props = {
   setAudioUrl: (s: string) => void;
   setNote: (s: string) => void;
   setSongUrl: (s: string) => void;
+  open: boolean;
+  setOpen: (b: boolean) => void;
 };
 
 const MAX_NOTE = 200;
@@ -24,12 +26,14 @@ export default function VoiceNoteSection({
   setAudioUrl,
   setNote,
   setSongUrl,
+  open,
+  setOpen,
 }: Props) {
-  const [open, setOpen] = useState(false);
   const [recording, setRecording] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [seconds, setSeconds] = useState(0);
+  const [songPreview, setSongPreview] = useState<{ title: string; thumbnailUrl: string } | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -44,6 +48,36 @@ export default function VoiceNoteSection({
       } catch {}
     };
   }, []);
+
+  // Debounced YouTube oEmbed lookup so the user sees the right video before
+  // their mom does. Spotify URLs are skipped (no public oEmbed).
+  useEffect(() => {
+    setSongPreview(null);
+    const url = songUrl.trim();
+    if (!url) return;
+    const isYouTube =
+      /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|v\/))[a-zA-Z0-9_-]{11}/.test(url);
+    if (!isYouTube) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const oembed = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
+        const r = await fetch(oembed);
+        if (!r.ok) return;
+        const data = await r.json();
+        if (cancelled) return;
+        if (data?.title && data?.thumbnail_url) {
+          setSongPreview({ title: String(data.title), thumbnailUrl: String(data.thumbnail_url) });
+        }
+      } catch {
+        // Silent fail — preview is a nicety, not a requirement.
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [songUrl]);
 
   async function startRecording() {
     setError(null);
@@ -148,12 +182,25 @@ export default function VoiceNoteSection({
           </p>
 
           {/* Song option */}
-          <div className="bg-gray-50 rounded-xl p-5 mb-4">
+          <div id="song" className="bg-gray-50 rounded-xl p-5 mb-4 scroll-mt-8">
             <p className="font-medium text-gray-950 mb-1">
               <span aria-hidden="true">♫ </span>Pick a song that reminds you of her
             </p>
             <p className="text-sm text-gray-700 mb-3 leading-relaxed">
               Paste a YouTube or Spotify link.
+              <br />
+              On YouTube? Tap Share → Copy link.{' '}
+              <a
+                href="https://www.youtube.com/results"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-rose-600 hover:text-rose-700 font-medium"
+              >
+                Or search YouTube ↗
+              </a>
+            </p>
+            <p className="text-sm text-gray-600 italic mb-3 leading-relaxed">
+              Heads up: Spotify only plays a 30-second preview unless your mom has Spotify. YouTube plays the full song for everyone.
             </p>
             <label htmlFor="song-url" className="sr-only">
               Song URL
@@ -166,10 +213,26 @@ export default function VoiceNoteSection({
               placeholder="https://youtube.com/watch?v=… or https://open.spotify.com/track/…"
               className="w-full border border-gray-200 rounded-xl p-3 text-base bg-white focus:border-rose-600 focus:ring-1 focus:ring-rose-600 focus:outline-none"
             />
+            {songPreview ? (
+              <div className="mt-3 flex gap-3 items-start bg-white rounded-xl border border-gray-200 p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={songPreview.thumbnailUrl}
+                  alt=""
+                  className="w-24 rounded-md flex-shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-gray-950">{songPreview.title}</p>
+                  <p className="text-xs text-gray-700 italic mt-1">
+                    Looks right? This is what your mom will see.
+                  </p>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {/* Voice option */}
-          <div className="bg-gray-50 rounded-xl p-5 mb-4">
+          <div id="voice" className="bg-gray-50 rounded-xl p-5 mb-4 scroll-mt-8">
             <p className="font-medium text-gray-950 mb-1">
               <span aria-hidden="true">🎤 </span>Record (30 seconds max)
             </p>
@@ -214,7 +277,7 @@ export default function VoiceNoteSection({
           </div>
 
           {/* Text option */}
-          <div className="bg-gray-50 rounded-xl p-5">
+          <div id="note" className="bg-gray-50 rounded-xl p-5 scroll-mt-8">
             <p className="font-medium text-gray-950 mb-1">
               <span aria-hidden="true">✍️ </span>Or write a note instead
             </p>

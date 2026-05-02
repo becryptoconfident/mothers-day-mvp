@@ -20,6 +20,7 @@ export async function POST(req: Request) {
     const foreverData = body.forever_data || {};
     const language =
       typeof body.language === 'string' && body.language.trim() ? body.language.trim() : 'English';
+    const deliveryMode: 'self' | 'mom' = body.delivery_mode === 'mom' ? 'mom' : 'self';
 
     const requiredContact = ['user_email', 'delivery_time', 'delivery_timezone'];
     for (const k of requiredContact) {
@@ -30,6 +31,9 @@ export async function POST(req: Request) {
     }
     if (contact.mom_email && !isEmail(contact.mom_email)) {
       return NextResponse.json({ error: 'invalid mom_email' }, { status: 400 });
+    }
+    if (deliveryMode === 'mom' && !isEmail(contact.mom_email)) {
+      return NextResponse.json({ error: 'mom_email required for direct-to-mom delivery' }, { status: 400 });
     }
     if (!messages || typeof messages !== 'object') {
       return NextResponse.json({ error: 'missing messages' }, { status: 400 });
@@ -75,11 +79,21 @@ export async function POST(req: Request) {
       paid: isFree,
     };
 
-    // Try with the language column first. If the column doesn't exist yet
-    // (Postgres error code 42703), fall back to inserting without it.
+    // Try with language + delivery_mode first. On Postgres 42703 (undefined
+    // column), retry without delivery_mode, then without language.
     let orderRow: { id: string } | null = null;
     let insertError: { message?: string; code?: string } | null = null;
     {
+      const r = await supabaseAdmin
+        .from('orders')
+        .insert({ ...baseRow, language, delivery_mode: deliveryMode })
+        .select('id')
+        .single();
+      orderRow = r.data;
+      insertError = r.error;
+    }
+    if (insertError && (insertError.code === '42703' || /column .*delivery_mode/i.test(insertError.message || ''))) {
+      console.warn('orders.delivery_mode column missing — retrying without it');
       const r = await supabaseAdmin
         .from('orders')
         .insert({ ...baseRow, language })
@@ -121,9 +135,12 @@ export async function POST(req: Request) {
     const orderForScheduler = {
       id: orderRow.id,
       user_email: contact.user_email,
+      user_name: contact.user_name || null,
       delivery_time: contact.delivery_time,
       delivery_timezone: contact.delivery_timezone,
       mom_name: contact.mom_name || null,
+      mom_email: contact.mom_email || null,
+      delivery_mode: deliveryMode,
       messages: { day_1: messages.day_1, day_2: messages.day_2, day_3: messages.day_3 },
       media,
     };

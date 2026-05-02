@@ -74,6 +74,14 @@ export default function VoiceInput({ currentValue, onTranscript, language, disab
   const manualStopRef = useRef<boolean>(false);
   // Session-wide hard-stop timer.
   const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Latest onTranscript held in a ref so the parent's inline arrow doesn't
+  // churn the recognition lifecycle and fire spurious 'aborted' errors.
+  const onTranscriptRef = useRef(onTranscript);
+  useEffect(() => {
+    onTranscriptRef.current = onTranscript;
+  });
+  // True when an abort was triggered by us (cleanup) — swallow that error.
+  const internalAbortRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -101,11 +109,16 @@ export default function VoiceInput({ currentValue, onTranscript, language, disab
       interimRef.current = transcript;
       const baseline = baselineRef.current;
       const joiner = baseline && !baseline.endsWith(' ') ? ' ' : '';
-      onTranscript(baseline ? baseline + joiner + transcript : transcript);
+      onTranscriptRef.current(baseline ? baseline + joiner + transcript : transcript);
     };
 
     recognition.onerror = (e) => {
       const code = e.error || '';
+      // If we caused the abort (cleanup, language change, restart), swallow it.
+      if (code === 'aborted' && internalAbortRef.current) {
+        internalAbortRef.current = false;
+        return;
+      }
       if (code === 'not-allowed' || code === 'service-not-allowed') {
         setErrorMsg("Microphone access blocked. You can type instead.");
       } else if (code === 'no-speech') {
@@ -155,13 +168,14 @@ export default function VoiceInput({ currentValue, onTranscript, language, disab
 
     recognitionRef.current = recognition;
     return () => {
+      internalAbortRef.current = true;
       try {
         recognition.abort();
       } catch {}
       if (stopTimerRef.current) clearTimeout(stopTimerRef.current);
       recognitionRef.current = null;
     };
-  }, [language, onTranscript]);
+  }, [language]);
 
   const start = () => {
     const r = recognitionRef.current;

@@ -16,6 +16,7 @@ export async function POST(req: Request) {
     const media = Array.isArray(body.media) ? body.media : [];
     const foreverData = body.forever_data || {};
     const language = typeof body.language === 'string' ? body.language : 'English';
+    const deliveryMode: 'self' | 'mom' = body.delivery_mode === 'mom' ? 'mom' : 'self';
     const targetEmail = String(body.email || contact.user_email || '').trim();
 
     if (!isEmail(targetEmail)) {
@@ -33,6 +34,7 @@ export async function POST(req: Request) {
       answers,
       contact: { ...contact, user_email: targetEmail, delivery_timezone: contact.delivery_timezone || 'America/Chicago', delivery_time: contact.delivery_time || '09:00' },
       language,
+      deliveryMode,
       previewMessages: messages,
       previewMedia: media,
       foreverData,
@@ -56,10 +58,20 @@ export async function POST(req: Request) {
       amount_paid: 0,
     };
 
-    // Try with the language column first; fall back if column doesn't exist.
+    // Try with language + delivery_mode first. On Postgres 42703 (undefined
+    // column), retry without delivery_mode, then without language.
     let orderRow: { id: string } | null = null;
     let insertError: { message?: string; code?: string } | null = null;
     {
+      const r = await supabaseAdmin
+        .from('orders')
+        .insert({ ...baseRow, language, delivery_mode: deliveryMode })
+        .select('id')
+        .single();
+      orderRow = r.data;
+      insertError = r.error;
+    }
+    if (insertError && (insertError.code === '42703' || /column .*delivery_mode/i.test(insertError.message || ''))) {
       const r = await supabaseAdmin
         .from('orders')
         .insert({ ...baseRow, language })

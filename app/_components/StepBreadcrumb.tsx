@@ -9,7 +9,7 @@ export function StepBreadcrumb(props: {
   next?: string;
 }) {
   return (
-    <div className="py-4 mb-8">
+    <div className="py-4 mb-6">
       {props.done ? (
         <div className="text-xs uppercase tracking-[0.2em] text-gray-700">{props.done}</div>
       ) : null}

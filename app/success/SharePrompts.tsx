@@ -25,7 +25,7 @@ export default function SharePrompts({ landingUrl }: { landingUrl: string }) {
   );
 
   return (
-    <section className="mt-10 pt-6 border-t" aria-label="Share with a friend">
+    <section className="mt-6 pt-6 border-t" aria-label="Share with a friend">
       <p className="font-serif text-lg mb-1 text-gray-900">
         Know someone who freezes on this stuff too?
       </p>

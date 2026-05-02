@@ -17,9 +17,11 @@ type Contact = {
   user_name: string;
   mom_nickname: string;
   mom_name: string;
+  mom_email: string;
   delivery_time: string;
   delivery_timezone: string;
 };
+type DeliveryMode = 'self' | 'mom';
 type MediaItem = { day: number; type: 'photo'; url: string; caption?: string };
 
 const LABELS: Array<{ key: keyof Messages; label: string; sub: string }> = [
@@ -41,10 +43,12 @@ export default function PreviewPage() {
     user_name: '',
     mom_nickname: '',
     mom_name: '',
+    mom_email: '',
     delivery_time: '09:00',
     delivery_timezone:
       typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Chicago' : 'America/Chicago',
   });
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>('self');
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [personalAudioUrl, setPersonalAudioUrl] = useState('');
   const [personalNote, setPersonalNote] = useState('');
@@ -55,6 +59,8 @@ export default function PreviewPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [photosOpen, setPhotosOpen] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const [customizeOpen, setCustomizeOpen] = useState(false);
 
   // Hydrate state from localStorage on mount.
   useEffect(() => {
@@ -90,6 +96,9 @@ export default function PreviewPage() {
         }
         if (typeof parsed.customHeadline === 'string') setCustomHeadline(parsed.customHeadline);
         if (typeof parsed.customSignoff === 'string') setCustomSignoff(parsed.customSignoff);
+        if (parsed.deliveryMode === 'mom' || parsed.deliveryMode === 'self') {
+          setDeliveryMode(parsed.deliveryMode);
+        }
       }
     } catch {}
     setHydrated(true);
@@ -111,6 +120,7 @@ export default function PreviewPage() {
           theme,
           customHeadline,
           customSignoff,
+          deliveryMode,
         }),
       );
     } catch {}
@@ -125,6 +135,7 @@ export default function PreviewPage() {
     theme,
     customHeadline,
     customSignoff,
+    deliveryMode,
   ]);
 
   // If no answers, redirect to builder.
@@ -173,15 +184,22 @@ export default function PreviewPage() {
   }, [hydrated, answers, language]);
 
   const isReady = useMemo(() => {
-    return (
-      !!messages &&
-      !!messages.day_1 &&
-      !!messages.day_2 &&
-      !!messages.day_3 &&
-      contact.user_email.trim().length > 3 &&
-      contact.user_email.includes('@')
-    );
-  }, [messages, contact.user_email]);
+    if (
+      !messages ||
+      !messages.day_1 ||
+      !messages.day_2 ||
+      !messages.day_3 ||
+      contact.user_email.trim().length <= 3 ||
+      !contact.user_email.includes('@')
+    ) {
+      return false;
+    }
+    if (deliveryMode === 'mom') {
+      const m = contact.mom_email.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m)) return false;
+    }
+    return true;
+  }, [messages, contact.user_email, contact.mom_email, deliveryMode]);
 
   async function submit() {
     if (!answers || !messages || !isReady || submitting) return;
@@ -193,11 +211,12 @@ export default function PreviewPage() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           amount: 0,
-          contact,
+          contact: { ...contact, mom_email: deliveryMode === 'mom' ? contact.mom_email.trim() : (contact.mom_email.trim() || null) },
           answers,
           messages,
           media,
           language,
+          delivery_mode: deliveryMode,
           forever_data: {
             language,
             personal_audio_url: personalAudioUrl || undefined,
@@ -223,7 +242,7 @@ export default function PreviewPage() {
   if (!hydrated) {
     return (
       <main id="main" className="min-h-screen bg-white">
-        <div className="max-w-3xl mx-auto p-6 py-12">
+        <div className="max-w-3xl mx-auto p-6 pt-6 pb-12">
           <p className="text-gray-700">Loading…</p>
         </div>
       </main>
@@ -233,7 +252,7 @@ export default function PreviewPage() {
   if (!answers) {
     return (
       <main id="main" className="min-h-screen bg-white">
-        <div className="max-w-3xl mx-auto p-6 py-12">
+        <div className="max-w-3xl mx-auto p-6 pt-6 pb-12">
           <p className="text-gray-700">Redirecting to the builder…</p>
         </div>
       </main>
@@ -249,8 +268,8 @@ export default function PreviewPage() {
         Skip to content
       </a>
       <main id="main" className="min-h-screen bg-white">
-        <div className="max-w-3xl mx-auto px-6 py-12 md:py-16">
-          <header className="mb-12">
+        <div className="max-w-3xl mx-auto px-6 pt-6 md:pt-10 pb-12 md:pb-16">
+          <header className="mb-6">
             <p className="text-xs uppercase tracking-[0.2em] text-gray-700 mb-3">
               Answered 4 questions · Here are your messages
             </p>
@@ -268,7 +287,7 @@ export default function PreviewPage() {
           {generating ? (
             <section
               aria-live="polite"
-              className="bg-white rounded-2xl p-8 mb-10 shadow-sm"
+              className="bg-white rounded-2xl p-8 mb-6 shadow-sm"
             >
               <p className="font-serif text-lg text-gray-950">Writing your messages…</p>
               <p className="text-sm text-gray-700 mt-2">
@@ -278,7 +297,7 @@ export default function PreviewPage() {
           ) : null}
 
           {generateError ? (
-            <section className="bg-gray-50 rounded-2xl p-8 mb-10">
+            <section className="bg-gray-50 rounded-2xl p-8 mb-6">
               <p className="font-medium text-gray-950">Couldn&rsquo;t generate the messages.</p>
               <p className="text-sm text-gray-800 mt-2">{generateError}</p>
               <button
@@ -295,7 +314,7 @@ export default function PreviewPage() {
           ) : null}
 
           {messages ? (
-            <section className="space-y-6 mb-8" aria-label="Your three messages">
+            <section className="space-y-6 mb-6" aria-label="Your three messages">
               {LABELS.map(({ key, label, sub }) => (
                 <article
                   key={key}
@@ -330,7 +349,7 @@ export default function PreviewPage() {
           ) : null}
 
           {messages ? (
-            <section className="mb-12" aria-label="What happens next">
+            <section className="mb-6" aria-label="What happens next">
               <p className="font-serif text-2xl text-gray-950 mb-3">
                 That&rsquo;s it. 3 messages, ready to send.
               </p>
@@ -345,7 +364,24 @@ export default function PreviewPage() {
           ) : null}
 
           {messages ? (
-            <section className="border-t border-gray-100 pt-12 mb-12" aria-label="Make it yours">
+            <SummaryCard
+              deliveryMode={deliveryMode}
+              momEmail={contact.mom_email}
+              photoCount={media.filter((m) => m.type === 'photo').length}
+              hasSong={!!songUrl.trim()}
+              hasVoice={!!personalAudioUrl}
+              hasNote={!!personalNote.trim()}
+              theme={theme}
+              hasCustomHeadline={!!customHeadline.trim()}
+              hasCustomSignoff={!!customSignoff.trim()}
+              setPhotosOpen={setPhotosOpen}
+              setVoiceOpen={setVoiceOpen}
+              setCustomizeOpen={setCustomizeOpen}
+            />
+          ) : null}
+
+          {messages ? (
+            <section className="border-t border-gray-100 pt-12 mb-6" aria-label="Make it yours">
               <p className="text-sm text-gray-700 mb-5">
                 Use as much or as little as you want. Just want the 3 messages? Great. Skip the photos.
                 Either way, your mom gets a forever page she can keep.
@@ -364,6 +400,8 @@ export default function PreviewPage() {
                   setAudioUrl={setPersonalAudioUrl}
                   setNote={setPersonalNote}
                   setSongUrl={setSongUrl}
+                  open={voiceOpen}
+                  setOpen={setVoiceOpen}
                 />
               </div>
               <div className="mt-4">
@@ -377,13 +415,15 @@ export default function PreviewPage() {
                   setTheme={setTheme}
                   setHeadline={setCustomHeadline}
                   setSignoff={setCustomSignoff}
+                  open={customizeOpen}
+                  setOpen={setCustomizeOpen}
                 />
               </div>
             </section>
           ) : null}
 
           {messages ? (
-            <section className="border-t border-gray-100 pt-12 mb-12" aria-label="Where to send">
+            <section id="delivery" className="border-t border-gray-100 pt-12 mb-6 scroll-mt-8" aria-label="Where to send">
               <h2 className="font-serif text-2xl md:text-3xl text-gray-950 mb-6">Where should we email you?</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <Field
@@ -412,18 +452,112 @@ export default function PreviewPage() {
                 Timezone detected: <strong className="text-gray-700">{contact.delivery_timezone}</strong>. Emails go out at
                 that time on May 8th, 9th, and 10th.
               </p>
+
+              {/* Delivery mode — buyer relays vs. direct-to-mom */}
+              <fieldset className="mt-8">
+                <legend className="font-serif text-xl md:text-2xl text-gray-950 mb-4">
+                  How should we get these to mom?
+                </legend>
+                <div className="space-y-3">
+                  <label
+                    htmlFor="dm-self"
+                    className={[
+                      'flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-colors',
+                      deliveryMode === 'self'
+                        ? 'border-rose-600 bg-rose-50'
+                        : 'border-gray-200 hover:border-gray-300 bg-white',
+                    ].join(' ')}
+                  >
+                    <input
+                      type="radio"
+                      id="dm-self"
+                      name="delivery-mode"
+                      value="self"
+                      checked={deliveryMode === 'self'}
+                      onChange={() => setDeliveryMode('self')}
+                      className="mt-1 accent-rose-600"
+                    />
+                    <span>
+                      <span className="block text-base font-medium text-gray-950">
+                        I&rsquo;ll send them myself.
+                      </span>
+                      <span className="block text-sm text-gray-700 mt-1 leading-relaxed">
+                        You&rsquo;ll get an email each morning to copy and text to her.
+                      </span>
+                    </span>
+                  </label>
+                  <label
+                    htmlFor="dm-mom"
+                    className={[
+                      'flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-colors',
+                      deliveryMode === 'mom'
+                        ? 'border-rose-600 bg-rose-50'
+                        : 'border-gray-200 hover:border-gray-300 bg-white',
+                    ].join(' ')}
+                  >
+                    <input
+                      type="radio"
+                      id="dm-mom"
+                      name="delivery-mode"
+                      value="mom"
+                      checked={deliveryMode === 'mom'}
+                      onChange={() => setDeliveryMode('mom')}
+                      className="mt-1 accent-rose-600"
+                    />
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-base font-medium text-gray-950">
+                        Send them straight to mom.
+                      </span>
+                      <span className="block text-sm text-gray-700 mt-1 leading-relaxed">
+                        We email her on the right days. You&rsquo;re bcc&rsquo;d. Replies go to you.
+                      </span>
+                      {deliveryMode === 'mom' ? (
+                        <span className="block mt-3">
+                          <label htmlFor="mom_email" className="block text-sm font-medium text-gray-700 mb-2">
+                            Mom&rsquo;s email *
+                          </label>
+                          <input
+                            id="mom_email"
+                            type="email"
+                            value={contact.mom_email}
+                            onChange={(e) => setContact((c) => ({ ...c, mom_email: e.target.value }))}
+                            required
+                            placeholder="mom@example.com"
+                            className="w-full border border-gray-200 rounded-xl p-3 text-base bg-white focus:border-rose-600 focus:ring-1 focus:ring-rose-600 focus:outline-none"
+                          />
+                          {contact.mom_email.trim() &&
+                          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.mom_email.trim()) ? (
+                            <span className="block mt-2 text-xs text-red-700">
+                              That doesn&rsquo;t look like a valid email.
+                            </span>
+                          ) : null}
+                        </span>
+                      ) : null}
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
             </section>
           ) : null}
 
           {messages ? (
             <section className="border-t border-gray-100 pt-12 pb-12" aria-label="Get your messages">
-              <div className="text-center mb-10">
+              <div className="text-center mb-6">
                 <p className="font-serif text-2xl md:text-3xl text-gray-950 mb-3">
                   These are yours. It&rsquo;s free.
                 </p>
                 <p className="text-gray-800 leading-relaxed max-w-xl mx-auto">
-                  Hit the button. We&rsquo;ll email each message to you on the right morning.
-                  You copy and text {contact.mom_nickname || contact.mom_name || 'mom'}. Done in 30 seconds a day.
+                  {deliveryMode === 'mom' ? (
+                    <>
+                      Hit the button. We&rsquo;ll email each message straight to{' '}
+                      {contact.mom_nickname || contact.mom_name || 'mom'} on the right morning. You&rsquo;re bcc&rsquo;d.
+                    </>
+                  ) : (
+                    <>
+                      Hit the button. We&rsquo;ll email each message to you on the right morning.
+                      You copy and text {contact.mom_nickname || contact.mom_name || 'mom'}. Done in 30 seconds a day.
+                    </>
+                  )}
                 </p>
               </div>
 
@@ -436,7 +570,9 @@ export default function PreviewPage() {
                 {submitting ? 'Setting up…' : 'Get My Messages →'}
               </button>
               <p className="mt-3 text-xs text-gray-700 text-center">
-                No payment. No sign-up. We just need an email so we can send the messages to you.
+                {deliveryMode === 'mom'
+                  ? "No payment. No sign-up. We just need both emails so we can send the messages to mom and bcc you."
+                  : 'No payment. No sign-up. We just need an email so we can send the messages to you.'}
               </p>
               {submitError ? (
                 <p role="alert" className="mt-4 text-sm text-red-700 text-center">
@@ -451,6 +587,133 @@ export default function PreviewPage() {
         </div>
       </main>
     </>
+  );
+}
+
+// Per-row summary of the optional enhancements available on this preview.
+// State-driven status updates as the buyer adds things, with each row acting
+// as an open-and-scroll trigger for its corresponding section. Solves the
+// "buyers don't scroll, so they never discover the optional sections" problem
+// by surfacing every option above the fold as a single scannable list.
+function SummaryCard(props: {
+  deliveryMode: DeliveryMode;
+  momEmail: string;
+  photoCount: number;
+  hasSong: boolean;
+  hasVoice: boolean;
+  hasNote: boolean;
+  theme: ThemeKey;
+  hasCustomHeadline: boolean;
+  hasCustomSignoff: boolean;
+  setPhotosOpen: (b: boolean) => void;
+  setVoiceOpen: (b: boolean) => void;
+  setCustomizeOpen: (b: boolean) => void;
+}) {
+  // Anchor click handler: optionally expand the target section, then scroll to
+  // its id. Small setTimeout lets React commit the open-state before scroll so
+  // the target lives at its post-expand position.
+  function go(targetId: string, expand?: () => void) {
+    if (expand) expand();
+    setTimeout(() => {
+      const el = document.getElementById(targetId);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  }
+
+  const themeLabel =
+    props.theme.charAt(0).toUpperCase() + props.theme.slice(1);
+  const isDefaultCustomize =
+    props.theme === 'rose' && !props.hasCustomHeadline && !props.hasCustomSignoff;
+
+  const rows: Array<{
+    label: string;
+    status: string;
+    done: boolean;
+    onClick: () => void;
+  }> = [
+    {
+      label: 'Send straight to mom',
+      status:
+        props.deliveryMode === 'mom'
+          ? `Sending to ${props.momEmail || 'mom'}`
+          : "I'll send myself",
+      done: props.deliveryMode === 'mom',
+      onClick: () => go('delivery'),
+    },
+    {
+      label: 'Photos',
+      status: `${props.photoCount} of 2 added`,
+      done: props.photoCount > 0,
+      onClick: () => go('photos', () => props.setPhotosOpen(true)),
+    },
+    {
+      label: 'Song',
+      status: props.hasSong ? 'Added' : 'Not added',
+      done: props.hasSong,
+      onClick: () => go('song', () => props.setVoiceOpen(true)),
+    },
+    {
+      label: 'Voice note',
+      status: props.hasVoice ? 'Recorded' : 'Not recorded',
+      done: props.hasVoice,
+      onClick: () => go('voice', () => props.setVoiceOpen(true)),
+    },
+    {
+      label: 'Personal note',
+      status: props.hasNote ? 'Written' : 'Not written',
+      done: props.hasNote,
+      onClick: () => go('note', () => props.setVoiceOpen(true)),
+    },
+    {
+      label: 'Customize the page',
+      status: isDefaultCustomize ? 'Default theme' : `Custom: ${themeLabel}`,
+      done: !isDefaultCustomize,
+      onClick: () => go('customize', () => props.setCustomizeOpen(true)),
+    },
+  ];
+
+  return (
+    <section
+      className="bg-rose-50 rounded-2xl p-6 md:p-8 mb-6"
+      aria-label="Optional enhancements summary"
+    >
+      <h2 className="font-serif text-2xl text-gray-950 mb-1">Make it more personal</h2>
+      <p className="text-sm text-gray-700 mb-5">All optional. Tap any to add.</p>
+      <ul className="space-y-1">
+        {rows.map((r) => (
+          <li key={r.label}>
+            <button
+              type="button"
+              onClick={r.onClick}
+              className="w-full min-h-[44px] flex items-center justify-between gap-3 px-3 py-3 -mx-3 rounded-xl hover:bg-white/60 focus:outline-2 focus:outline-rose-500 focus:outline-offset-2 transition-colors text-left"
+            >
+              <span className="flex items-center gap-2 min-w-0">
+                <span
+                  aria-hidden="true"
+                  className={[
+                    'inline-flex items-center justify-center w-5 h-5 rounded-full text-xs flex-shrink-0',
+                    r.done
+                      ? 'bg-rose-600 text-white'
+                      : 'border border-gray-300 text-transparent',
+                  ].join(' ')}
+                >
+                  ✓
+                </span>
+                <span className="text-base text-gray-950 font-medium truncate">{r.label}</span>
+              </span>
+              <span
+                className={[
+                  'text-sm flex-shrink-0 truncate max-w-[55%] text-right',
+                  r.done ? 'text-rose-700 font-medium' : 'text-gray-600',
+                ].join(' ')}
+              >
+                {r.status}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -546,7 +809,7 @@ function PhotoSection({
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200">
+    <div id="photos" className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 scroll-mt-8">
       <button
         type="button"
         onClick={() => setOpen(!open)}

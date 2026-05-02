@@ -11,16 +11,16 @@ Stay close to what they actually said.
 - Don't infer emotions they didn't express.
 - Don't add dramatic language or poetic flourishes.
 - If they said "she makes soup when I'm sick" — write about the soup. Don't turn it into a meditation on unconditional love.
-- Short sentences. Simple words. Sound like a person writing a letter, not a poet writing a tribute.
+- Short sentences. Simple words. Warm and loving, not "in love" — a kid talking to a parent, not a poet writing a tribute.
 - The letter should feel like something they WOULD have written if they had the words. Not something a stranger wrote about their mom.
-- 3 paragraphs max. Keep it tight.
+- 2–3 short paragraphs. 120–180 words total. Stop when the thought is done — don't pad to fill space.
 
 Voice rules:
 - First person — written as the SENDER, addressed to the RECIPIENT.
 - Use contractions. Conversational, not formal.
 - Reference the SPECIFIC details provided. Quote actual moments.
 - Open with something other than "Dear Mom" or "Hey Mom" — the page already says who it's for. Open with the memory itself or a small observation.
-- End on a single quiet line.
+- End restrained. Don't pull back for a dramatic one-line closer ("So let's go.", "Let's do this, Mom."). End inside the last paragraph.
 
 Avoid: "you're the best mom", "I'm so lucky", "I don't know what I'd do without you", anything that could appear on a greeting card. Avoid sweeping statements about love or family.
 
@@ -56,11 +56,11 @@ Q3 — Something they've never told mom but she should know: ${cleanedAnswers.qu
 
 Q4 — Something they're looking forward to doing with mom: ${cleanedAnswers.question_4}
 
-${lang ? `Write the letter in ${lang}. Write naturally — not like a translation. Write like a native speaker expressing love to their mother.\n\n` : ''}Write the letter now. 3–4 paragraphs. Specific to these details. Open on the memory. End looking forward to ${lang ? `the future together, in ${lang}` : 'the future together'}. The kind of letter that makes her cry the first time and re-read it on hard days.`;
+${lang ? `Write the letter in ${lang}. Write naturally — not like a translation. Write like a native speaker expressing love to their mother.\n\n` : ''}Write the letter now. 2–3 short paragraphs. 120–180 words. Specific to these details. Open on the memory. End looking forward to ${lang ? `the future together, in ${lang}` : 'the future together'}.`;
 
   return generateText({
     systemPrompt: LETTER_SYSTEM_PROMPT,
     userPrompt,
-    maxTokens: 1200,
+    maxTokens: 600,
   });
 }

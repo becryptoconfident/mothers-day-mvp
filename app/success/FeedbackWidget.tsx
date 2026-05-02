@@ -22,7 +22,7 @@ export default function FeedbackWidget({ orderId }: { orderId: string }) {
 
   if (mode === 'submitted') {
     return (
-      <section className="mt-10 pt-6 border-t" aria-label="Feedback">
+      <section className="mt-6 pt-6 border-t" aria-label="Feedback">
         <p role="status" aria-live="polite" className="text-sm text-gray-900">
           Thanks. This helps me make it better.
         </p>
@@ -31,7 +31,7 @@ export default function FeedbackWidget({ orderId }: { orderId: string }) {
   }
 
   return (
-    <section className="mt-10 pt-6 border-t" aria-label="Rate your experience">
+    <section className="mt-6 pt-6 border-t" aria-label="Rate your experience">
       <p className="font-serif text-lg mb-3 text-gray-900">How was this?</p>
       <div className="flex flex-wrap gap-2">
         <button

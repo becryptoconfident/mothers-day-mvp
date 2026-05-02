@@ -174,64 +174,70 @@ export default function ExtraMediaEditor({
           </p>
         ) : null}
 
-        <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {extras.map((extra, i) => (
-            <figure key={extra.url} className="space-y-2">
-              <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-50 shadow-sm">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={extra.url}
-                  alt={captions[String(i)] || `Extra photo ${i + 1}`}
-                  className="w-full h-full object-cover"
+        {extras.length > 0 ? (
+          <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {extras.map((extra, i) => (
+              <figure key={extra.url} className="space-y-2">
+                <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-50 shadow-sm">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={extra.url}
+                    alt={captions[String(i)] || `Extra photo ${i + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeExtra(i)}
+                    aria-label={`Remove extra photo ${i + 1}`}
+                    className="absolute top-2 right-2 bg-white/90 rounded-full px-2 py-1 text-xs font-semibold focus:outline-2 focus:outline-rose-500 focus:outline-offset-2"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <label className="sr-only" htmlFor={`caption-${i}`}>
+                  Caption for photo {i + 1}
+                </label>
+                <input
+                  id={`caption-${i}`}
+                  type="text"
+                  value={captions[String(i)] || ''}
+                  onChange={(e) => setCaption(i, e.target.value)}
+                  maxLength={MAX_CAPTION}
+                  placeholder="Add a caption (optional)"
+                  className="w-full text-xs border border-gray-200 rounded-lg p-2 bg-white focus:border-rose-600 focus:ring-1 focus:ring-rose-600 focus:outline-none"
                 />
-                <button
-                  type="button"
-                  onClick={() => removeExtra(i)}
-                  aria-label={`Remove extra photo ${i + 1}`}
-                  className="absolute top-2 right-2 bg-white/90 rounded-full px-2 py-1 text-xs font-semibold focus:outline-2 focus:outline-rose-500 focus:outline-offset-2"
-                >
-                  Remove
-                </button>
-              </div>
-              <label className="sr-only" htmlFor={`caption-${i}`}>
-                Caption for photo {i + 1}
+              </figure>
+            ))}
+          </div>
+        ) : null}
+
+        {slotsToShow > 0 ? (
+          <div className={`grid grid-cols-3 gap-2 ${extras.length > 0 ? 'mt-3' : 'mt-5'}`}>
+            {Array.from({ length: slotsToShow }).map((_, k) => (
+              <label
+                key={`slot-${k}`}
+                className="h-16 flex items-center justify-center border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-rose-600 transition-colors focus-within:outline-2 focus-within:outline-rose-500 focus-within:outline-offset-2"
+              >
+                <input
+                  type="file"
+                  accept="image/*,.heic,.heif"
+                  className="sr-only"
+                  disabled={uploading !== null}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) onExtraFile(f);
+                    e.target.value = '';
+                  }}
+                />
+                <span className="text-xs font-medium text-gray-700">
+                  {uploading === 'extra' && k === 0 ? 'Uploading…' : '+ Add photo'}
+                </span>
               </label>
-              <input
-                id={`caption-${i}`}
-                type="text"
-                value={captions[String(i)] || ''}
-                onChange={(e) => setCaption(i, e.target.value)}
-                maxLength={MAX_CAPTION}
-                placeholder="Add a caption (optional)"
-                className="w-full text-xs border border-gray-200 rounded-lg p-2 bg-white focus:border-rose-600 focus:ring-1 focus:ring-rose-600 focus:outline-none"
-              />
-            </figure>
-          ))}
+            ))}
+          </div>
+        ) : null}
 
-          {Array.from({ length: slotsToShow }).map((_, k) => (
-            <label
-              key={`slot-${k}`}
-              className="aspect-square flex items-center justify-center border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-rose-600 transition-colors focus-within:outline-2 focus-within:outline-rose-500 focus-within:outline-offset-2 min-h-[44px]"
-            >
-              <input
-                type="file"
-                accept="image/*,.heic,.heif"
-                className="sr-only"
-                disabled={uploading !== null}
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) onExtraFile(f);
-                  e.target.value = '';
-                }}
-              />
-              <span className="text-xs font-medium text-gray-700">
-                {uploading === 'extra' && k === 0 ? 'Uploading…' : '+ Add photo'}
-              </span>
-            </label>
-          ))}
-        </div>
-
-        {/* Mother's Day photo — separate slot, slightly larger, solid border */}
+        {/* Mother's Day photo — separate slot, expands to filled-state size after upload */}
         <div className="mt-8 pt-6 border-t border-gray-100">
           <p className="text-base text-gray-800 leading-relaxed mb-3">
             <span className="font-medium text-gray-950">
@@ -271,7 +277,7 @@ export default function ExtraMediaEditor({
               />
             </figure>
           ) : (
-            <label className="block aspect-[4/3] flex items-center justify-center border-2 border-solid border-gray-300 rounded-xl cursor-pointer hover:border-rose-600 transition-colors focus-within:outline-2 focus-within:outline-rose-500 focus-within:outline-offset-2 min-h-[44px]">
+            <label className="h-16 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-rose-600 transition-colors focus-within:outline-2 focus-within:outline-rose-500 focus-within:outline-offset-2">
               <input
                 type="file"
                 accept="image/*,.heic,.heif"

@@ -158,7 +158,7 @@ export default function BuilderPage() {
   if (!hydrated) {
     return (
       <main id="main" className="min-h-screen bg-white">
-        <div className="max-w-2xl mx-auto p-6 py-12">
+        <div className="max-w-2xl mx-auto p-6 pt-6 pb-12">
           <p className="text-gray-700">Loading…</p>
         </div>
       </main>
@@ -174,7 +174,7 @@ export default function BuilderPage() {
         Skip to content
       </a>
       <main id="main" className="min-h-screen bg-white">
-        <div className="max-w-2xl mx-auto px-6 py-12 md:py-16">
+        <div className="max-w-2xl mx-auto px-6 pt-6 md:pt-10 pb-12 md:pb-16">
           <StepBreadcrumb
             done={stepIndex > 0 ? `Step ${stepIndex} of 6 done` : undefined}
             current={
@@ -253,7 +253,7 @@ export default function BuilderPage() {
             />
           )}
 
-          <p className="mt-8 text-xs text-gray-700 text-center">
+          <p className="mt-6 text-xs text-gray-700 text-center">
             Take your time. Your answer saves automatically.
           </p>
 
@@ -325,7 +325,7 @@ function LanguageStep({
           Messages will be written in {effectiveLanguage}.
         </p>
       ) : null}
-      <div className="mt-10">
+      <div className="mt-6">
         <button
           type="button"
           disabled={!ready}
@@ -394,7 +394,7 @@ function NamesStep({
         Goes on her page: &ldquo;Happy Mother&rsquo;s Day, {momName.trim() || momNickname.trim() || 'Mom'}.&rdquo;
       </p>
 
-      <div className="mt-10 flex flex-col-reverse sm:flex-row gap-3">
+      <div className="mt-6 flex flex-col-reverse sm:flex-row gap-3">
         <button
           type="button"
           onClick={onBack}
@@ -493,7 +493,7 @@ function QuestionStep({
       >
         {counterText}
       </p>
-      <div className="mt-10 flex flex-col-reverse sm:flex-row gap-3">
+      <div className="mt-6 flex flex-col-reverse sm:flex-row gap-3">
         <button
           type="button"
           onClick={onBack}

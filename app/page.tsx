@@ -29,7 +29,7 @@ export default function Home() {
       </a>
       <main id="main" className="bg-white">
         {/* Above the fold — three things, lots of air */}
-        <section className="max-w-3xl mx-auto px-6 py-32 md:py-44 text-center">
+        <section className="max-w-3xl mx-auto px-6 py-16 md:py-24 text-center">
           <h1 className="font-serif text-[48px] md:text-[80px] leading-[1.02] tracking-tight text-gray-950 mb-8">
             5 minutes for you. Mother&rsquo;s Day nailed.
           </h1>
@@ -44,7 +44,7 @@ export default function Home() {
           </Link>
         </section>
 
-        <div className="max-w-4xl mx-auto px-6 space-y-24 md:space-y-32 pb-24 md:pb-32">
+        <div className="max-w-4xl mx-auto px-6 space-y-20 md:space-y-24 pb-24 md:pb-32">
           {/* 5-4-3-2-1 — just the grid, no copy */}
           <section aria-label="What you get">
             <ul role="list" className="grid grid-cols-2 sm:grid-cols-5 gap-4">

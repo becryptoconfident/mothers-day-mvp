@@ -178,6 +178,61 @@ export function dailyMessageEmail(args: {
   };
 }
 
+// Direct-to-mom variant. Sent to mom_email on the same May 8/9/10 schedule as
+// the buyer-relay email, with the buyer bcc'd and reply-to set to the buyer.
+// No marketing footer, no contribute link — mom's inbox stays clean.
+export function momMessageEmail(args: {
+  day: 1 | 2 | 3;
+  message: string;
+  fromName: string; // buyer's first name (or "Someone" if unknown)
+  momName?: string;
+  media?: MediaItem[];
+  foreverUrl?: string;
+}): { subject: string; html: string } {
+  const { day, message, fromName, momName, media = [], foreverUrl } = args;
+  const isFinale = day === 3;
+  const who = momName ? escapeHTML(momName) : 'Mom';
+  const safeFrom = escapeHTML(fromName);
+
+  const subject = isFinale
+    ? `Happy Mother's Day, ${who} — from ${fromName}`
+    : day === 1
+      ? `${fromName} wanted you to have this`
+      : `One more from ${fromName}`;
+
+  const opening = isFinale
+    ? `Happy Mother's Day, ${who}.`
+    : day === 1
+      ? `${safeFrom} put this together for you.`
+      : `${safeFrom} sent another.`;
+
+  const foreverButton = isFinale && foreverUrl
+    ? `
+    <div style="margin:32px 0 8px;text-align:center;">
+      <a href="${escapeHTML(foreverUrl)}" style="display:inline-block;background:#e11d48;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:9999px;font-family:-apple-system,system-ui,sans-serif;font-weight:500;font-size:16px;">
+        See the page they made for you →
+      </a>
+    </div>`
+    : '';
+
+  const inner = `
+    <p style="font-size:18px;color:#374151;margin:0 0 20px;font-family:-apple-system,system-ui,sans-serif;">
+      ${opening}
+    </p>
+    <div style="background:#f9fafb;border-left:4px solid #e11d48;padding:18px 20px;border-radius:6px;">
+      <p style="margin:0;font-size:18px;line-height:1.7;">${escapeHTML(message)}</p>
+    </div>
+    ${renderMedia(media)}
+    ${foreverButton}
+    <div class="footer">
+      Sent through Mother&rsquo;s Day Messages on ${safeFrom}&rsquo;s behalf.
+      Reply to this email to reach ${safeFrom}.
+    </div>
+  `;
+
+  return { subject, html: wrap(subject, inner) };
+}
+
 // Optional afternoon nudge for the ADHD / neurodivergent crowd. Calming tone.
 export function gentleReminderEmail(args: {
   day: 1 | 2 | 3;

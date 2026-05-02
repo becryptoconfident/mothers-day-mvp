@@ -96,13 +96,13 @@ async function SuccessInner({
   return (
     <Wrap>
       <main id="main">
-        <header className="text-center mb-12">
+        <header className="text-center mb-6">
           <h1 className="font-serif text-3xl md:text-4xl mb-3 text-gray-950">You&rsquo;re set.</h1>
         </header>
 
         {/* Status checklist */}
         <section
-          className="bg-white rounded-2xl shadow-sm p-8 mb-10"
+          className="bg-white rounded-2xl shadow-sm p-8 mb-6"
           aria-label="Status of your order"
         >
           <h2 className="font-serif text-xl mb-4 text-gray-900">What happens next</h2>
@@ -127,7 +127,10 @@ async function SuccessInner({
         {/* Three primary actions, same level, same style */}
         <SuccessActions orderId={order.id} landingUrl={landingUrl} />
 
-        <section className="bg-white rounded-2xl shadow-sm p-6 mb-10" aria-label="Email confirmation">
+        {/* Contribute — surfaced here so the ask isn't buried under housekeeping */}
+        <ContributeWidget orderId={order.id} alreadyContributed={contributed} />
+
+        <section className="bg-white rounded-2xl shadow-sm p-6 mb-6" aria-label="Email confirmation">
           <p className="font-medium text-gray-950 mb-2">Email confirmation just sent to:</p>
           <p className="font-mono text-sm text-gray-700">{order.user_email}</p>
           <p className="text-xs text-gray-700 mt-2">
@@ -150,9 +153,6 @@ async function SuccessInner({
 
         {/* Feedback */}
         <FeedbackWidget orderId={order.id} />
-
-        {/* Contribute (post-success) */}
-        <ContributeWidget orderId={order.id} alreadyContributed={contributed} />
       </main>
     </Wrap>
   );
@@ -183,7 +183,7 @@ function StatusRow(props: {
 
 function Wrap({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-white p-4 py-12 md:py-16">
+    <div className="min-h-screen bg-white p-4 pt-6 md:pt-10 pb-12 md:pb-16">
       <div className="max-w-xl mx-auto">{children}</div>
     </div>
   );

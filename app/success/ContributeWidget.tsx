@@ -39,7 +39,7 @@ export default function ContributeWidget({
   return (
     <section
       id="contribute"
-      className="mt-12 bg-gray-50 rounded-2xl p-8 md:p-10 scroll-mt-8"
+      className="mt-6 mb-6 bg-rose-50 rounded-2xl p-8 md:p-10 scroll-mt-8"
       aria-label="Contribute"
     >
       {alreadyContributed ? (
@@ -47,7 +47,9 @@ export default function ContributeWidget({
           <p className="font-serif text-lg text-gray-950 mb-1">Thanks for contributing.</p>
           <p className="text-sm text-gray-700">Means a lot. Now go love on your mom.</p>
         </div>
-      ) : null}
+      ) : (
+        <h2 className="font-serif text-2xl mb-4 text-gray-900">If this helped, throw me something.</h2>
+      )}
 
       <p className="text-gray-900 leading-relaxed mb-2">
         I built this for free because I get it. Some of us just aren&rsquo;t wired for this stuff.

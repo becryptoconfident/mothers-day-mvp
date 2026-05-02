@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { FOREVER_THEMES, type ThemeKey } from '@/lib/forever-themes';
 
 export type { ThemeKey };
@@ -15,6 +14,8 @@ type Props = {
   setTheme: (t: ThemeKey) => void;
   setHeadline: (s: string) => void;
   setSignoff: (s: string) => void;
+  open: boolean;
+  setOpen: (b: boolean) => void;
 };
 
 function defaultHeadlineFor(name: string) {
@@ -35,8 +36,9 @@ export default function CustomizeSection({
   setTheme,
   setHeadline,
   setSignoff,
+  open,
+  setOpen,
 }: Props) {
-  const [open, setOpen] = useState(false);
 
   // Resolved name used in default copy (first name preferred, then nickname).
   const headlineName = momName.trim() || momNickname.trim() || 'Mom';
@@ -60,7 +62,7 @@ export default function CustomizeSection({
   ];
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200">
+    <div id="customize" className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 scroll-mt-8">
       <button
         type="button"
         onClick={() => setOpen(!open)}
