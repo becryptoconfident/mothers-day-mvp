@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, use } from 'react';
+import { EDIT_CLOSE_DATE, localToUTC } from '@/lib/dates';
 
 type Messages = Record<`day_${1 | 2 | 3 | 4 | 5 | 6 | 7}`, string>;
 
@@ -128,21 +129,24 @@ function EditFlow({ orderId }: { orderId: string }) {
       <div className="bg-white rounded-lg border p-8">
         <h1 className="text-2xl font-bold mb-2">Locked in.</h1>
         <p className="text-gray-900 mb-4">
-          The edit window closed May 3rd. Messages are scheduled.
+          The edit window for messages closed May 7th. Your messages are scheduled.
+        </p>
+        <p className="text-gray-900 mb-4">
+          Your Forever Page is still editable — it stays online for a full year. Save a copy before it expires.
         </p>
         <ReadOnlyMessages order={order} />
       </div>
     );
   }
 
-  // Edit window closes May 3rd 23:59 in user's local TZ. Show days remaining.
-  const editCloseUTC = new Date('2026-05-04T04:59:00Z'); // ~ May 3 23:59 CDT, close enough for the banner
+  // Edit window closes May 7th 23:59 in user's local TZ. Show days remaining.
+  const editCloseUTC = new Date(localToUTC(EDIT_CLOSE_DATE, '23:59', order.delivery_timezone));
   const msLeft = editCloseUTC.getTime() - Date.now();
   const daysLeft = Math.max(0, Math.floor(msLeft / (1000 * 60 * 60 * 24)));
   const hoursLeft = Math.max(0, Math.floor((msLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)));
   const status =
     msLeft <= 0
-      ? { tone: 'red', text: 'Locked — May 3rd has passed' }
+      ? { tone: 'red', text: 'Locked — May 7th has passed' }
       : daysLeft === 0
         ? { tone: 'red', text: `Editable — ${hoursLeft} hours remaining` }
         : daysLeft <= 1
@@ -169,8 +173,8 @@ function EditFlow({ orderId }: { orderId: string }) {
       <div className={`border rounded-lg p-3 mb-6 text-sm ${statusBg}`}>
         <p className="font-semibold">{status.text}</p>
         <p className="text-xs mt-1 opacity-90">
-          You can edit messages, photos, your delivery time, and mom&rsquo;s name until <strong>May 3rd, 11:59pm</strong>.
-          After that, they&rsquo;re locked for delivery.
+          You can edit messages, photos, your delivery time, and mom&rsquo;s name until <strong>May 7th, 11:59pm</strong>.
+          After that, they&rsquo;re locked for delivery. Your Forever Page is editable all year — save a copy before it expires.
         </p>
       </div>
 

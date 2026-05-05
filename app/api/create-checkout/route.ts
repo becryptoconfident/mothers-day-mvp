@@ -164,6 +164,7 @@ export async function POST(req: Request) {
       isFree: true,
       landingUrl,
       contributeUrl,
+      deliveryMode,
     });
     const confRes = await sendEmail({
       to: contact.user_email,

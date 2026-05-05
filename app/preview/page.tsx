@@ -353,13 +353,24 @@ export default function PreviewPage() {
               <p className="font-serif text-2xl text-gray-950 mb-3">
                 That&rsquo;s it. 3 messages, ready to send.
               </p>
-              <p className="text-gray-800 leading-relaxed mb-1">
-                We&rsquo;ll email them to you on the 8th, 9th, and 10th.
-              </p>
-              <p className="text-gray-800 leading-relaxed mb-1">
-                You copy, you paste, you send to {contact.mom_nickname || contact.mom_name || 'mom'}.
-              </p>
-              <p className="text-gray-800 leading-relaxed">Takes 30 seconds each morning.</p>
+              {deliveryMode === 'mom' ? (
+                <>
+                  <p className="text-gray-800 leading-relaxed mb-1">
+                    We&rsquo;ll email each message directly to {contact.mom_nickname || contact.mom_name || 'mom'} on May 8th, May 9th, and May 10th.
+                  </p>
+                  <p className="text-gray-800 leading-relaxed">You&rsquo;ll be CC&rsquo;d on each one.</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-800 leading-relaxed mb-1">
+                    We&rsquo;ll email the messages to you on May 8th, May 9th, and May 10th.
+                  </p>
+                  <p className="text-gray-800 leading-relaxed mb-1">
+                    You copy, you paste, you send to {contact.mom_nickname || contact.mom_name || 'mom'}.
+                  </p>
+                  <p className="text-gray-800 leading-relaxed">Takes 30 seconds each morning.</p>
+                </>
+              )}
             </section>
           ) : null}
 
@@ -384,7 +395,7 @@ export default function PreviewPage() {
             <section className="border-t border-gray-100 pt-12 mb-6" aria-label="Make it yours">
               <p className="text-sm text-gray-700 mb-5">
                 Use as much or as little as you want. Just want the 3 messages? Great. Skip the photos.
-                Either way, your mom gets a forever page she can keep.
+                Either way, your mom gets a private page she can revisit all year.
               </p>
               <PhotoSection
                 open={photosOpen}
@@ -450,13 +461,13 @@ export default function PreviewPage() {
               </div>
               <p className="mt-4 text-xs text-gray-700">
                 Timezone detected: <strong className="text-gray-700">{contact.delivery_timezone}</strong>. Emails go out at
-                that time on May 8th, 9th, and 10th.
+                that time on May 8th, May 9th, and May 10th.
               </p>
 
               {/* Delivery mode — buyer relays vs. direct-to-mom */}
               <fieldset className="mt-8">
                 <legend className="font-serif text-xl md:text-2xl text-gray-950 mb-4">
-                  How should we get these to mom?
+                  How should we deliver the messages?
                 </legend>
                 <div className="space-y-3">
                   <label
@@ -479,10 +490,10 @@ export default function PreviewPage() {
                     />
                     <span>
                       <span className="block text-base font-medium text-gray-950">
-                        I&rsquo;ll send them myself.
+                        Send them to me
                       </span>
                       <span className="block text-sm text-gray-700 mt-1 leading-relaxed">
-                        You&rsquo;ll get an email each morning to copy and text to her.
+                        We&rsquo;ll email the messages to you so you can copy, edit, or forward them yourself.
                       </span>
                     </span>
                   </label>
@@ -506,10 +517,10 @@ export default function PreviewPage() {
                     />
                     <span className="flex-1 min-w-0">
                       <span className="block text-base font-medium text-gray-950">
-                        Send them straight to mom.
+                        Send directly to Mom
                       </span>
                       <span className="block text-sm text-gray-700 mt-1 leading-relaxed">
-                        We email her on the right days. You&rsquo;re bcc&rsquo;d. Replies go to you.
+                        We&rsquo;ll email each message directly to Mom and CC you so you have a copy.
                       </span>
                       {deliveryMode === 'mom' ? (
                         <span className="block mt-3">
@@ -550,7 +561,7 @@ export default function PreviewPage() {
                   {deliveryMode === 'mom' ? (
                     <>
                       Hit the button. We&rsquo;ll email each message straight to{' '}
-                      {contact.mom_nickname || contact.mom_name || 'mom'} on the right morning. You&rsquo;re bcc&rsquo;d.
+                      {contact.mom_nickname || contact.mom_name || 'mom'} on the right morning. You&rsquo;ll be CC&rsquo;d on each one.
                     </>
                   ) : (
                     <>
@@ -571,7 +582,7 @@ export default function PreviewPage() {
               </button>
               <p className="mt-3 text-xs text-gray-700 text-center">
                 {deliveryMode === 'mom'
-                  ? "No payment. No sign-up. We just need both emails so we can send the messages to mom and bcc you."
+                  ? "No payment. No sign-up. We just need both emails so we can send the messages to mom and CC you."
                   : 'No payment. No sign-up. We just need an email so we can send the messages to you.'}
               </p>
               {submitError ? (
@@ -632,11 +643,11 @@ function SummaryCard(props: {
     onClick: () => void;
   }> = [
     {
-      label: 'Send straight to mom',
+      label: 'Delivery',
       status:
         props.deliveryMode === 'mom'
-          ? `Sending to ${props.momEmail || 'mom'}`
-          : "I'll send myself",
+          ? 'To Mom, CC you'
+          : 'Emailed to you',
       done: props.deliveryMode === 'mom',
       onClick: () => go('delivery'),
     },

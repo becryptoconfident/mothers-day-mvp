@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Mother's Day. Handled.",
     description:
-      "4 questions. 5 minutes. She gets messages all weekend and a page she keeps forever. Free.",
+      "4 questions. 5 minutes. She gets messages all weekend and a page that stays online for a full year. Free.",
     url: SITE_URL,
     siteName: "Mother's Day Messages",
     images: [

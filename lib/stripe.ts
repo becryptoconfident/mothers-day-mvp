@@ -4,7 +4,7 @@ import Stripe from 'stripe';
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 const PRODUCT_NAME = "Mother's Day Messages";
-const PRODUCT_DESCRIPTION = '3 messages, 2 photos, 1 forever page. We email you each morning May 8–10. You copy, paste, send to mom.';
+const PRODUCT_DESCRIPTION = '3 messages, 2 photos, 1 forever page. We email you each morning May 8th, May 9th, and May 10th. You copy, paste, send to mom.';
 
 export async function createCheckoutSession(args: {
   orderId: string;

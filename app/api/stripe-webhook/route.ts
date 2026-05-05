@@ -160,6 +160,7 @@ export async function POST(req: Request) {
     isFree: false,
     landingUrl,
     contributeUrl,
+    deliveryMode: order.delivery_mode === 'mom' ? 'mom' : 'self',
   });
   const confRes = await sendEmail({
     to: order.user_email,

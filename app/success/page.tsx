@@ -30,6 +30,7 @@ type SuccessOrder = {
   delivery_time: string;
   paid: boolean;
   amount_paid: number;
+  delivery_mode: string | null;
 };
 
 async function SuccessInner({
@@ -47,7 +48,7 @@ async function SuccessInner({
   if (orderIdParam) {
     const { data } = await supabaseAdmin
       .from('orders')
-      .select('id,mom_name,user_email,delivery_time,paid,amount_paid')
+      .select('id,mom_name,user_email,delivery_time,paid,amount_paid,delivery_mode')
       .eq('id', orderIdParam)
       .maybeSingle();
     if (data && (data as SuccessOrder).paid) order = data as SuccessOrder;
@@ -55,7 +56,7 @@ async function SuccessInner({
     for (let attempt = 0; attempt < 6; attempt++) {
       const { data } = await supabaseAdmin
         .from('orders')
-        .select('id,mom_name,user_email,delivery_time,paid,amount_paid')
+        .select('id,mom_name,user_email,delivery_time,paid,amount_paid,delivery_mode')
         .eq('stripe_session_id', sessionId)
         .maybeSingle();
       const candidate = data as SuccessOrder | null;
@@ -114,8 +115,12 @@ async function SuccessInner({
               Friday May 8th, Saturday May 9th, Sunday May 10th — Mother&rsquo;s Day morning.
             </StatusRow>
             <StatusRow now bold={`First delivery: Friday, May 8th at ${time}.`}>
-              We email <em>YOU</em> the message. You copy, paste in a text to{' '}
-              {order.mom_name || 'mom'}, send. ~30 seconds.
+              {order.delivery_mode === 'mom' ? (
+                <>We email each message directly to {order.mom_name || 'mom'}. You&rsquo;ll be CC&rsquo;d on each one.</>
+              ) : (
+                <>We email <em>YOU</em> the message. You copy, paste in a text to{' '}
+                {order.mom_name || 'mom'}, send. ~30 seconds.</>
+              )}
             </StatusRow>
             <StatusRow pending bold="Nothing to do until then.">
               We&rsquo;ll nudge you each morning at {time}.
@@ -141,7 +146,10 @@ async function SuccessInner({
 
         <section className="text-center mb-6">
           <p className="text-sm text-gray-700 mb-3">
-            Need to change anything? Edit until <strong className="text-gray-700">May 7th, 11:59pm</strong>.
+            Need to change a message? Edit until <strong className="text-gray-700">May 7th, 11:59pm</strong>.
+          </p>
+          <p className="text-sm text-gray-700 mb-3">
+            Your Forever Page stays online for one full year. You can edit it any time — then save a copy before it expires.
           </p>
           <Link
             href={`/edit/${order.id}`}

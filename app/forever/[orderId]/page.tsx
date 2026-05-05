@@ -10,7 +10,6 @@ import { cleanUserTextBatch } from '@/lib/text-cleaner';
 import { generateForeverLetter } from '@/lib/forever-letter';
 import { FOREVER_THEMES, type ThemeKey } from '@/lib/forever-themes';
 import ForeverMoment from './ForeverMoment';
-import ExtraMediaEditor from './ExtraMediaEditor';
 
 type Params = Promise<{ orderId: string }>;
 
@@ -155,14 +154,10 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default async function ForeverPage({
   params,
-  searchParams,
 }: {
   params: Params;
-  searchParams: Promise<{ edit?: string }>;
 }) {
   const { orderId } = await params;
-  const sp = await searchParams;
-  const editMode = sp.edit === 'true';
   const order = await loadOrder(orderId);
   if (!order || !order.paid) notFound();
 
@@ -362,17 +357,6 @@ export default async function ForeverPage({
           </div>
         </div>
       </section>
-
-      {/* Edit-mode controls — only on /forever/{id}?edit=true; lives below the letter */}
-      {editMode ? (
-        <ExtraMediaEditor
-          orderId={order.id}
-          initialExtras={fd.extra_media || []}
-          initialCaptions={fd.captions || {}}
-          initialMothersDayPhoto={fd.mothers_day_photo || null}
-          accent={T.accent}
-        />
-      ) : null}
 
       {/* Static extras gallery — shows uploaded extras (separate source from the
           inlined letter photos, so no double-render) */}

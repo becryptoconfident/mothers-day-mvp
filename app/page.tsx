@@ -15,7 +15,7 @@ const FIVE_FOUR_THREE: Array<{ n: string; label: string }> = [
 const STEPS: Array<{ n: number; text: string }> = [
   { n: 1, text: 'Answer 4 questions about your mom.' },
   { n: 2, text: 'We write 3 messages you can send her.' },
-  { n: 3, text: 'She gets a page she keeps forever.' },
+  { n: 3, text: 'She gets a private page she can revisit all year.' },
 ];
 
 export default function Home() {
@@ -99,19 +99,22 @@ export default function Home() {
             </div>
           </section>
 
-          {/* Keepsake — short */}
+          {/* Better than a card — umbrella positioning */}
           <section className="max-w-2xl mx-auto" aria-labelledby="keepsake-h">
-            <h2 id="keepsake-h" className="font-serif text-3xl md:text-5xl text-gray-950 mb-5">
-              It&rsquo;s a real keepsake. For free.
+            <h2 id="keepsake-h" className="font-serif text-3xl md:text-5xl text-gray-950 mb-3">
+              Better than a card.
             </h2>
+            <p className="text-base text-rose-700 italic mb-6">
+              Tiny AI-assisted keepsakes for the people you should text better.
+            </p>
             <p className="text-lg text-gray-800 leading-relaxed mb-3">
-              On Mother&rsquo;s Day morning, she gets a private webpage just for her.
+              A card gets read once and disappears into a drawer. This gives her three Mother&rsquo;s Day messages and a private page she can revisit for a full year.
             </p>
             <p className="text-lg text-gray-800 leading-relaxed mb-3">
               All 3 messages, your photos, an AI-written letter from you. In her language.
             </p>
             <p className="text-lg text-gray-700 italic">
-              It&rsquo;s hers forever. And it costs nothing to make.
+              Stays online for a full year. Save a copy any time. Next May, come back and make her a new one. Costs nothing.
             </p>
           </section>
 
@@ -123,7 +126,7 @@ export default function Home() {
             <ForeverPreview />
             <p className="text-lg text-gray-800 leading-relaxed mt-8 text-center max-w-xl mx-auto">
               A private page. Her messages. Her photos. A letter from you.
-              She keeps it forever.
+              Stays online for a full year — save a copy any time.
             </p>
           </section>
 
@@ -323,7 +326,7 @@ export default function Home() {
           <div className="max-w-2xl mx-auto px-6 py-12 text-center text-sm text-gray-700">
             <p>Built by someone who gets it, for people like me.</p>
             <p className="mt-6 text-xs text-gray-600">
-              We email YOU. You text mom. We never message her directly.
+              We email you each message to forward yourself &mdash; or we send them straight to mom with you CC&rsquo;d. Your call.
             </p>
           </div>
         </footer>

@@ -114,7 +114,7 @@ export function dailyMessageEmail(args: {
       </p>
       <p style="margin:0 0 12px;"><a href="${escapeHTML(foreverUrl)}" style="color:#9f1239;font-family:ui-monospace,monospace;font-size:14px;word-break:break-all;">${escapeHTML(foreverUrl)}</a></p>
       <p style="font-size:14px;color:#6b7280;margin:0 0 8px;line-height:1.6;">
-        A private page she can keep forever. All your messages, your photos, a letter from you.
+        A private page she can revisit for a full year. All your messages, your photos, a letter from you. Save a copy any time before it expires.
       </p>
       <p style="font-size:14px;color:#6b7280;margin:0 0 16px;line-height:1.6;">
         You can always add more photos later — even one from today. <a href="${escapeHTML(foreverEditUrl)}" style="color:#e11d48;font-weight:500;">Edit your page →</a>
@@ -275,8 +275,10 @@ export function confirmationEmail(args: {
   isFree?: boolean;
   landingUrl?: string;
   contributeUrl?: string;
+  deliveryMode?: 'self' | 'mom';
 }): { subject: string; html: string } {
   const who = args.momName ? escapeHTML(args.momName) : 'mom';
+  const mode = args.deliveryMode ?? 'self';
   const headerLine = args.isFree ? '✓ You&rsquo;re in' : '✓ Paid';
   const tipLine =
     args.landingUrl || args.contributeUrl
@@ -287,21 +289,31 @@ export function confirmationEmail(args: {
           ${args.contributeUrl ? `Contribute: <a href="${escapeHTML(args.contributeUrl)}" style="color:#e11d48;">tip jar</a>` : ''}
         </p>`
       : '';
+  const deliveryLine = mode === "mom"
+    ? `<div style="color:#6b7280;font-size:12px;margin-top:6px;">Delivery: Send directly to ${who} &mdash; you&rsquo;ll be CC&rsquo;d on each message.</div>`
+    : `<div style="color:#6b7280;font-size:12px;margin-top:6px;">Delivery: Send to me &mdash; messages emailed to you to forward.</div>`;
+  const bodyPara = mode === "mom"
+    ? `<p>Starting <strong>${escapeHTML(args.firstSendDate)}</strong>, we email each message directly to ${who}. You&rsquo;ll be CC&rsquo;d on each one &mdash; Friday, Saturday, Sunday morning.</p>`
+    : `<p>Starting <strong>${escapeHTML(args.firstSendDate)}</strong>, we email you each morning with that day&rsquo;s message. Copy it. Paste in a text to ${who}. Send. Done. ~30 seconds a day. Three messages total &mdash; Friday, Saturday, Sunday morning.</p>`;
+  const footerDisclaimer = mode === "mom"
+    ? `<p style="margin-top:10px;font-size:12px;color:#9ca3af;">Each message goes directly to ${who}. You&rsquo;re CC&rsquo;d on every one.</p>`
+    : `<p style="margin-top:10px;font-size:12px;color:#9ca3af;">We email YOU. You text ${who}. We never message her directly.</p>`;
   const inner = `
     <div style="border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:14px 0;margin-bottom:18px;">
       <div style="color:#15803d;font-size:13px;font-weight:500;">${headerLine}</div>
       <div style="color:#111827;font-size:15px;font-weight:600;margin-top:4px;">→ All set. Nothing else for you to do until ${escapeHTML(args.firstSendDate)}.</div>
-      <div style="color:#6b7280;font-size:12px;font-style:italic;margin-top:6px;">Next: First morning email lands ${escapeHTML(args.firstSendDate)}. Two more after that, through Mother&rsquo;s Day.</div>
+      ${deliveryLine}
+      <div style="color:#6b7280;font-size:12px;font-style:italic;margin-top:4px;">Next: First morning email lands ${escapeHTML(args.firstSendDate)}. Two more after that, through Mother&rsquo;s Day.</div>
     </div>
     <h1 style="font-family:-apple-system,system-ui,sans-serif;font-size:24px;margin:0 0 16px;">You&rsquo;re set.</h1>
-    <p>Starting <strong>${escapeHTML(args.firstSendDate)}</strong>, we email you each morning with that day&rsquo;s message. Copy it. Paste in a text to ${who}. Send. Done. ~30 seconds a day. Three messages total — Friday, Saturday, Sunday morning.</p>
+    ${bodyPara}
     <p style="margin-top:24px;">Want to change something? Edit messages, photos, or your delivery time:</p>
     <p style="margin-top:8px;"><a href="${escapeHTML(args.editUrl)}" style="display:inline-block;padding:12px 20px;background:#3b82f6;color:#fff;text-decoration:none;border-radius:6px;">Edit your messages</a></p>
     <div class="footer">
       <p>Order ${escapeHTML(args.orderId.slice(0, 8))}. Reply if anything looks off.</p>
       <p style="margin-top:14px;font-family:Georgia,serif;color:#9f1239;">#doitforbonnie</p>
       <p style="font-size:11px;color:#9ca3af;font-style:italic;">Built this for my mom Bonnie. Use the tag with yours.</p>
-      <p style="margin-top:10px;font-size:12px;color:#9ca3af;">We email YOU. You text ${who}. We never message her directly.</p>
+      ${footerDisclaimer}
       ${tipLine}
     </div>`;
   return { subject: 'Mother’s Day — confirmed', html: wrap('Confirmed', inner) };
@@ -393,7 +405,7 @@ export function foreverPageEmail(args: {
       </p>
     </div>
     <p style="font-size:14px;color:#6b7280;margin-top:20px;">
-      All 3 messages, your photos, and the letter — all on one page. She can share it. She can come back to it forever.
+      All 3 messages, your photos, and the letter — all on one page. She can share it. She can come back to it for a full year — save a copy any time.
     </p>
     <p style="font-size:14px;color:#6b7280;margin-top:14px;">
       Suggested message: &ldquo;Happy Mother&rsquo;s Day. I made you something. ${escapeHTML(args.foreverUrl)}&rdquo;

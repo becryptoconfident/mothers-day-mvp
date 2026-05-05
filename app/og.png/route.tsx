@@ -61,7 +61,7 @@ export async function GET() {
             maxWidth: 880,
           }}
         >
-          5 minutes. Free. She gets messages all weekend and a page she keeps forever.
+          5 minutes. Free. She gets messages all weekend and a page that stays online for a full year.
         </div>
       </div>
     ),
