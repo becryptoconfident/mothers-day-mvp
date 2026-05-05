@@ -2,7 +2,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import TipJar from './_components/TipJar';
 import StandaloneTipForm from './_components/StandaloneTipForm';
-import ForeverPreview from './_components/ForeverPreview';
 
 const FIVE_FOUR_THREE: Array<{ n: string; label: string }> = [
   { n: '5', label: 'minutes' },
@@ -123,7 +122,22 @@ export default function Home() {
             <p id="preview-h" className="font-serif text-3xl md:text-5xl text-gray-950 mb-8 text-center">
               This is what she gets.
             </p>
-            <ForeverPreview />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/forever-preview.png"
+              alt="Sample forever page — what your mom receives"
+              className="block mx-auto w-full h-auto rounded-xl shadow-md"
+            />
+            <p className="mt-6 text-center">
+              <a
+                href="https://mothers-day-mvp.vercel.app/forever/c1043c51-fb0a-42e9-a0c6-b927d078312b"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-rose-600 hover:text-rose-700 underline underline-offset-4 font-medium"
+              >
+                See a real one →
+              </a>
+            </p>
             <p className="text-lg text-gray-800 leading-relaxed mt-8 text-center max-w-xl mx-auto">
               A private page. Her messages. Her photos. A letter from you.
               Stays online for a full year — save a copy any time.
