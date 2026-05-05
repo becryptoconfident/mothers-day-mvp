@@ -358,7 +358,7 @@ export default function PreviewPage() {
                   <p className="text-gray-800 leading-relaxed mb-1">
                     We&rsquo;ll email each message directly to {contact.mom_nickname || contact.mom_name || 'mom'} on May 8th, May 9th, and May 10th.
                   </p>
-                  <p className="text-gray-800 leading-relaxed">You&rsquo;ll be CC&rsquo;d on each one.</p>
+                  <p className="text-gray-800 leading-relaxed">You&rsquo;ll get a copy of each one.</p>
                 </>
               ) : (
                 <>
@@ -493,7 +493,7 @@ export default function PreviewPage() {
                         Send them to me
                       </span>
                       <span className="block text-sm text-gray-700 mt-1 leading-relaxed">
-                        We&rsquo;ll email the messages to you so you can copy, edit, or forward them yourself.
+                        You&rsquo;ll get an email each morning with the message. Copy it, text it to her.
                       </span>
                     </span>
                   </label>
@@ -520,7 +520,7 @@ export default function PreviewPage() {
                         Send directly to Mom
                       </span>
                       <span className="block text-sm text-gray-700 mt-1 leading-relaxed">
-                        We&rsquo;ll email each message directly to Mom and CC you so you have a copy.
+                        We email her directly on May 8th, 9th, and 10th &mdash; Mother&rsquo;s Day morning. You&rsquo;ll get a copy of each one. Replies go to you.
                       </span>
                       {deliveryMode === 'mom' ? (
                         <span className="block mt-3">
@@ -561,7 +561,7 @@ export default function PreviewPage() {
                   {deliveryMode === 'mom' ? (
                     <>
                       Hit the button. We&rsquo;ll email each message straight to{' '}
-                      {contact.mom_nickname || contact.mom_name || 'mom'} on the right morning. You&rsquo;ll be CC&rsquo;d on each one.
+                      {contact.mom_nickname || contact.mom_name || 'Mom'}{' '}on May 8th, 9th, and 10th &mdash; and you&rsquo;ll get a copy.
                     </>
                   ) : (
                     <>
@@ -582,7 +582,7 @@ export default function PreviewPage() {
               </button>
               <p className="mt-3 text-xs text-gray-700 text-center">
                 {deliveryMode === 'mom'
-                  ? "No payment. No sign-up. We just need both emails so we can send the messages to mom and CC you."
+                  ? <>We&rsquo;ll send the messages to {contact.mom_name || 'Mom'}, and you&rsquo;ll get a copy.</>
                   : 'No payment. No sign-up. We just need an email so we can send the messages to you.'}
               </p>
               {submitError ? (
@@ -646,7 +646,7 @@ function SummaryCard(props: {
       label: 'Delivery',
       status:
         props.deliveryMode === 'mom'
-          ? 'To Mom, CC you'
+          ? 'To Mom, copy to you'
           : 'Emailed to you',
       done: props.deliveryMode === 'mom',
       onClick: () => go('delivery'),

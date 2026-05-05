@@ -116,7 +116,7 @@ async function SuccessInner({
             </StatusRow>
             <StatusRow now bold={`First delivery: Friday, May 8th at ${time}.`}>
               {order.delivery_mode === 'mom' ? (
-                <>We email each message directly to {order.mom_name || 'mom'}. You&rsquo;ll be CC&rsquo;d on each one.</>
+                <>We email each message directly to {order.mom_name || 'mom'}. You&rsquo;ll get a copy of each one.</>
               ) : (
                 <>We email <em>YOU</em> the message. You copy, paste in a text to{' '}
                 {order.mom_name || 'mom'}, send. ~30 seconds.</>
@@ -126,6 +126,11 @@ async function SuccessInner({
               We&rsquo;ll nudge you each morning at {time}.
             </StatusRow>
           </div>
+          {order.delivery_mode === 'mom' ? (
+            <p className="mt-4 text-sm text-gray-700">
+              Give {order.mom_name || 'Mom'} a heads up &mdash; she&rsquo;ll see an email from you in her inbox starting Friday morning.
+            </p>
+          ) : null}
 
         </section>
 

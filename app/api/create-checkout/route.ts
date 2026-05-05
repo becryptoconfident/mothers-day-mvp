@@ -159,6 +159,7 @@ export async function POST(req: Request) {
     const conf = confirmationEmail({
       orderId: orderRow.id,
       momName: contact.mom_name || undefined,
+      userName: contact.user_name || undefined,
       editUrl,
       firstSendDate: `${firstSendPretty} at ${formatTime12(contact.delivery_time)}`,
       isFree: true,

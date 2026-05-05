@@ -326,7 +326,7 @@ export default function Home() {
           <div className="max-w-2xl mx-auto px-6 py-12 text-center text-sm text-gray-700">
             <p>Built by someone who gets it, for people like me.</p>
             <p className="mt-6 text-xs text-gray-600">
-              We email you each message to forward yourself &mdash; or we send them straight to mom with you CC&rsquo;d. Your call.
+              We email you each message to forward yourself &mdash; or we send them straight to mom and you&rsquo;ll get a copy. Your call.
             </p>
           </div>
         </footer>

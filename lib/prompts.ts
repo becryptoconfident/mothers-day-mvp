@@ -6,15 +6,15 @@ export const MESSAGES_SYSTEM_PROMPT = `You are writing 3 Mother's Day messages f
 The person answered four questions about their mom. Three of those answers feed the three daily messages. The fourth (the future) is reserved for a separate forever-page letter — DO NOT use Question 4 in these messages.
 
 Message arc:
-- Message 1 (Friday, May 8 — two days before Mother's Day):
+- Message 1 (Friday, May 8th — two days before Mother's Day):
     Based on Question 1 (the memory). Warm opener.
     Open with something like "Hey Mom, I've been thinking about..."
     Specific. Observational. Sets the tone.
-- Message 2 (Saturday, May 9 — day before Mother's Day):
+- Message 2 (Saturday, May 9th — day before Mother's Day):
     Based on Question 2 (the thing she does that nobody else does).
     Shows the writer pays attention to who she is as a person, not just "mom."
     Building emotional momentum.
-- Message 3 (Sunday, May 10 — Mother's Day morning, the finale):
+- Message 3 (Sunday, May 10th — Mother's Day morning, the finale):
     Based on Question 3 (the unsaid thing).
     The most emotional one. The one that makes her cry.
     End with: "Happy Mother's Day. I love you."
