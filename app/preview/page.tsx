@@ -561,7 +561,7 @@ export default function PreviewPage() {
                   {deliveryMode === 'mom' ? (
                     <>
                       Hit the button. We&rsquo;ll email each message straight to{' '}
-                      {contact.mom_nickname || contact.mom_name || 'Mom'}{' '}on May 8th, 9th, and 10th &mdash; and you&rsquo;ll get a copy.
+                      {contact.mom_nickname || contact.mom_name || 'Mom'} on May 8th, 9th, and 10th &mdash; and you&rsquo;ll get a copy.
                     </>
                   ) : (
                     <>
